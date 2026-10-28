@@ -11,7 +11,9 @@ const health = useQuery({ queryKey: ['health'], queryFn: getHealth })
     <p class="text-sm text-muted-foreground">
       API:
       <span v-if="health.isPending.value">checking…</span>
-      <span v-else-if="health.isError.value" class="text-destructive">{{ health.error.value?.message }}</span>
+      <span v-else-if="health.isError.value" class="text-destructive">{{
+        health.error.value?.message
+      }}</span>
       <span v-else>{{ health.data.value?.status }}</span>
     </p>
   </section>

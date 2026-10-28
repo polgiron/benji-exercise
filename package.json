@@ -11,9 +11,13 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "gen:api": "turbo run gen:api"
+    "gen:api": "turbo run gen:api",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "prettier": "^3.9.10",
+    "prettier-plugin-organize-imports": "^4.3.0",
     "turbo": "^2.11.10"
   }
 }

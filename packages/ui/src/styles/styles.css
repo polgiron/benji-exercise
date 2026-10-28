@@ -1,0 +1,21 @@
+/* Entry point apps import: `@import '@repo/ui/styles.css';` */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'vue-sonner/style.css';
+@import './variables.css';
+@import './theme.css';
+
+/* Scan this package's components for classes, wherever the app lives. */
+@source '../components';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}

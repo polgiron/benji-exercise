@@ -22,16 +22,18 @@ Goal: a small, correct, well-tested vertical slice rather than a sprawling syste
 ```
 
 Monorepo: Turborepo + pnpm. `apps/api` is a uv project whose `package.json` scripts
-wrap `uv run …` so `pnpm dev` / `pnpm test` drive both apps.
+wrap `uv run …` so `pnpm dev` / `pnpm test` drive both apps. Shared packages: `@repo/ui`
+(shadcn-vue components, design tokens, light/dark theme), `@repo/utils`, `@repo/eslint-config`,
+`@repo/typescript-config`.
 
 ## 2. Data model (SQLite, SQLAlchemy 2 async + aiosqlite)
 
-| table | key columns | notes |
-|---|---|---|
-| `endpoints` | `id`, `url`, `event_types` (JSON), `secret`, `enabled`, `created_at` | single implicit customer (multi-tenancy cut) |
-| `events` | `id`, `type`, `payload` (JSON), `idempotency_key` **UNIQUE**, `payload_hash`, `created_at` | dedup of re-submits |
-| `deliveries` | `id`, `event_id`, `endpoint_id`, `status`, `attempt_count`, `next_attempt_at`, `lease_expires_at`, `last_error`, `version`, timestamps; **UNIQUE(event_id, endpoint_id)** | one row = one (event, endpoint) pair, forever |
-| `delivery_attempts` | `id`, `delivery_id`, `number`, `started_at`, `duration_ms`, `response_status`, `response_body` (truncated 2 KB), `error`, `trigger` (`auto` / `replay`) | append-only history |
+| table               | key columns                                                                                                                                                               | notes                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `endpoints`         | `id`, `url`, `event_types` (JSON), `secret`, `enabled`, `created_at`                                                                                                      | single implicit customer (multi-tenancy cut)  |
+| `events`            | `id`, `type`, `payload` (JSON), `idempotency_key` **UNIQUE**, `payload_hash`, `created_at`                                                                                | dedup of re-submits                           |
+| `deliveries`        | `id`, `event_id`, `endpoint_id`, `status`, `attempt_count`, `next_attempt_at`, `lease_expires_at`, `last_error`, `version`, timestamps; **UNIQUE(event_id, endpoint_id)** | one row = one (event, endpoint) pair, forever |
+| `delivery_attempts` | `id`, `delivery_id`, `number`, `started_at`, `duration_ms`, `response_status`, `response_body` (truncated 2 KB), `error`, `trigger` (`auto` / `replay`)                   | append-only history                           |
 
 Status machine: `pending → in_progress → succeeded | pending (retry scheduled) | failed`,
 and `failed → pending` via Replay. `version` increments on every change (used by the UI, §6).
@@ -41,17 +43,26 @@ IDs are prefixed (`ep_`, `evt_`, `dlv_`, `att_`) for readability in logs and the
 ## 3. Delivery pipeline
 
 **Fan-out (transactional outbox).** `POST /api/events` inserts the event and one `deliveries`
-row per *enabled* endpoint subscribed to its type, in the same transaction. Nothing is sent
+row per _enabled_ endpoint subscribed to its type, in the same transaction. Nothing is sent
 from the request path; if the process dies after commit, the worker still finds the rows.
 
 **Worker.** One asyncio task started in FastAPI's lifespan. Every ~500 ms (or immediately when
 woken by a new event) it:
 
-1. Claims due work atomically:
-   `UPDATE deliveries SET status='in_progress', lease_expires_at=now+30s, version=version+1
-    WHERE id IN (SELECT id … WHERE (status='pending' AND next_attempt_at<=now)
-                 OR (status='in_progress' AND lease_expires_at<now) LIMIT 10) RETURNING …`
-   Expired leases make crashed in-flight attempts recoverable.
+1. Claims due work atomically (expired leases make crashed in-flight attempts recoverable):
+
+   ```sql
+   UPDATE deliveries
+   SET status = 'in_progress', lease_expires_at = :now + 30s, version = version + 1
+   WHERE id IN (
+     SELECT id FROM deliveries
+     WHERE (status = 'pending' AND next_attempt_at <= :now)
+        OR (status = 'in_progress' AND lease_expires_at < :now)
+     LIMIT 10
+   )
+   RETURNING *
+   ```
+
 2. Sends each claimed delivery concurrently (bounded semaphore) with `httpx.AsyncClient`,
    10 s timeout, signed headers (§4).
 3. Records a `delivery_attempts` row and the outcome in one transaction, then publishes the
@@ -116,24 +127,24 @@ off-the-shelf verifiers:
 
 ## 7. API surface
 
-| method | path | purpose |
-|---|---|---|
-| GET | `/api/event-types` | catalogue (+ sample payloads for the test form) |
-| GET / POST | `/api/endpoints` | list / create (create returns the secret once) |
-| PATCH | `/api/endpoints/{id}` | enable / disable |
-| POST | `/api/events` | fire event (`Idempotency-Key` header) |
-| GET | `/api/deliveries?status=&endpoint_id=` | list, newest first |
-| GET | `/api/deliveries/{id}` | detail: payload + attempts |
-| POST | `/api/deliveries/{id}/replay` | failed → pending |
-| GET | `/api/stream` | SSE |
-| POST | `/mock/{ok,fail,flaky,slow,reject}` | dev receivers for demoing every path |
+| method     | path                                   | purpose                                         |
+| ---------- | -------------------------------------- | ----------------------------------------------- |
+| GET        | `/api/event-types`                     | catalogue (+ sample payloads for the test form) |
+| GET / POST | `/api/endpoints`                       | list / create (create returns the secret once)  |
+| PATCH      | `/api/endpoints/{id}`                  | enable / disable                                |
+| POST       | `/api/events`                          | fire event (`Idempotency-Key` header)           |
+| GET        | `/api/deliveries?status=&endpoint_id=` | list, newest first                              |
+| GET        | `/api/deliveries/{id}`                 | detail: payload + attempts                      |
+| POST       | `/api/deliveries/{id}/replay`          | failed → pending                                |
+| GET        | `/api/stream`                          | SSE                                             |
+| POST       | `/mock/{ok,fail,flaky,slow,reject}`    | dev receivers for demoing every path            |
 
 Errors share one shape: `{"error": {"code": "...", "message": "..."}}` (exception handlers
 also wrap validation errors), so the dashboard has one error path.
 
 ## 8. Dashboard
 
-Nuxt with `ssr: false`, shadcn-vue, Tailwind. Layers kept apart:
+Nuxt with `ssr: false`, Tailwind, components from `@repo/ui` (shadcn-vue). Layers kept apart:
 
 - `app/api/` — typed fetch functions only (types generated from FastAPI's OpenAPI schema with
   `openapi-typescript`: one contract, `pnpm gen:api`).
@@ -143,6 +154,7 @@ Nuxt with `ssr: false`, shadcn-vue, Tailwind. Layers kept apart:
   filter) lives in components or the URL query. No Pinia.
 
 Screens:
+
 - **Deliveries** (home): live table — event type, endpoint, status badge, attempts
   (`2/5`), next retry countdown, updated time; status filter in the URL; expandable row with
   payload JSON and attempt log (status code, duration, error, response excerpt); Replay on
@@ -178,26 +190,26 @@ the error normalisation in the API layer — the parts with real logic.
 
 ## 10. Scope cuts (deliberate) and next steps
 
-| cut | why OK for now | next step |
-|---|---|---|
-| Auth & multi-tenancy | one implicit customer | API keys → `customer_id` on every table |
-| Secrets stored in plaintext | local demo | encrypt at rest (KMS), rotation with overlap (two valid secrets) |
-| SQLite + single in-process worker | no infra allowed | Postgres + `SKIP LOCKED`, separate worker processes |
-| In-memory SSE bus, no backlog | refetch-on-reconnect covers gaps | Postgres `LISTEN/NOTIFY` or Redis pub/sub; `Last-Event-ID` |
-| No pagination beyond a limit | demo volumes | cursor pagination on `(created_at, id)` |
-| No per-endpoint rate limit / circuit breaker | — | auto-disable after N consecutive failures, notify customer |
-| No e2e tests | time | Playwright: create endpoint → fire → see succeeded |
-| No retention | — | TTL on attempts/payloads |
-| Bulk replay | — | "replay all failed for endpoint" |
+| cut                                          | why OK for now                   | next step                                                        |
+| -------------------------------------------- | -------------------------------- | ---------------------------------------------------------------- |
+| Auth & multi-tenancy                         | one implicit customer            | API keys → `customer_id` on every table                          |
+| Secrets stored in plaintext                  | local demo                       | encrypt at rest (KMS), rotation with overlap (two valid secrets) |
+| SQLite + single in-process worker            | no infra allowed                 | Postgres + `SKIP LOCKED`, separate worker processes              |
+| In-memory SSE bus, no backlog                | refetch-on-reconnect covers gaps | Postgres `LISTEN/NOTIFY` or Redis pub/sub; `Last-Event-ID`       |
+| No pagination beyond a limit                 | demo volumes                     | cursor pagination on `(created_at, id)`                          |
+| No per-endpoint rate limit / circuit breaker | —                                | auto-disable after N consecutive failures, notify customer       |
+| No e2e tests                                 | time                             | Playwright: create endpoint → fire → see succeeded               |
+| No retention                                 | —                                | TTL on attempts/payloads                                         |
+| Bulk replay                                  | —                                | "replay all failed for endpoint"                                 |
 
 ## 11. Day plan
 
-| slot | work |
-|---|---|
-| 0:00–0:45 | plan (this doc), monorepo scaffold, tooling |
+| slot      | work                                                                                    |
+| --------- | --------------------------------------------------------------------------------------- |
+| 0:00–0:45 | plan (this doc), monorepo scaffold, tooling                                             |
 | 0:45–3:30 | API: models, fan-out, worker, signing, replay, SSE, mock receivers — with tests as I go |
-| 3:30–6:30 | dashboard: API layer + type gen, endpoints, fire event, live deliveries |
-| 6:30–7:30 | polish async states, README, AI-usage note, final test pass |
+| 3:30–6:30 | dashboard: API layer + type gen, endpoints, fire event, live deliveries                 |
+| 6:30–7:30 | polish async states, README, AI-usage note, final test pass                             |
 
 ## 12. AI usage
 

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Toaster } from '@/components/ui/sonner'
-import 'vue-sonner/style.css'
+import { Toaster } from '@repo/ui'
 
 const links = [
   { to: '/', label: 'Deliveries' },
@@ -10,8 +9,8 @@ const links = [
 
 <template>
   <div class="min-h-screen">
-    <header class="border-b">
-      <nav class="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
+    <header class="border-b bg-card">
+      <nav class="mx-auto flex h-topbar max-w-content items-center gap-6 px-4">
         <span class="font-semibold">Benji Webhooks</span>
         <NuxtLink
           v-for="link in links"
@@ -22,9 +21,10 @@ const links = [
         >
           {{ link.label }}
         </NuxtLink>
+        <ThemeToggle class="ml-auto" />
       </nav>
     </header>
-    <main class="mx-auto max-w-6xl px-4 py-8">
+    <main class="mx-auto max-w-content px-4 py-8">
       <NuxtPage />
     </main>
     <Toaster rich-colors />

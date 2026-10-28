@@ -6,14 +6,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   // A live, client-side ops tool: nothing to gain from SSR here.
   ssr: false,
-  modules: ['shadcn-nuxt'],
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
-  },
-  shadcn: {
-    prefix: '',
-    componentDir: './app/components/ui',
   },
   runtimeConfig: {
     public: {
