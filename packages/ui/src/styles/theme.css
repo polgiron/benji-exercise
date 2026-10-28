@@ -2,39 +2,48 @@
  * Colors. The light theme is the default (`@theme`); `.dark` on any ancestor
  * (set on <html> by the app) swaps the same variables, so every
  * `bg-card`, `text-muted-foreground`… follows without `dark:` variants.
+ *
+ * Light palette sampled from the Benji partner dashboard: white surfaces with
+ * hairline borders, navy ink, and a vivid purple brand with a lavender tint.
  */
 @theme {
-  --color-background: oklch(0.985 0 0);
-  --color-foreground: oklch(0.145 0 0);
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.204 0.056 266.3); /* #0b1530 */
 
   --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
+  --color-card-foreground: oklch(0.204 0.056 266.3);
   --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
+  --color-popover-foreground: oklch(0.204 0.056 266.3);
 
-  --color-primary: oklch(0.205 0 0);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.955 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
-  --color-muted: oklch(0.955 0 0);
-  --color-muted-foreground: oklch(0.52 0 0);
-  --color-accent: oklch(0.955 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
+  --color-primary: oklch(0.503 0.251 306.7); /* #8a10d0 */
+  --color-primary-foreground: oklch(1 0 0);
+  --color-secondary: oklch(0.974 0.003 286.4); /* #f6f6f8 */
+  --color-secondary-foreground: oklch(0.312 0.022 277.6); /* #2e303c */
+  --color-muted: oklch(0.974 0.003 286.4);
+  --color-muted-foreground: oklch(0.484 0.021 275.3); /* #5b5e6b */
+  /* Lavender tint: hover rows, icon tiles, selected items. */
+  --color-accent: oklch(0.939 0.035 309.8); /* #f2e5fd */
+  --color-accent-foreground: oklch(0.424 0.212 306.2); /* #6c0ba6 */
 
-  --color-border: oklch(0.915 0 0);
-  --color-input: oklch(0.915 0 0);
-  --color-ring: oklch(0.708 0 0);
+  --color-border: oklch(0.959 0.003 286.3); /* #f1f1f3 */
+  --color-input: oklch(0.912 0.007 295.4); /* #e2e1e6 */
+  --color-ring: oklch(0.503 0.251 306.7);
 
   /* Status: delivery states and feedback. `-foreground` is text on a tinted
      background of the same color (`bg-success/10 text-success-foreground`). */
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-destructive-foreground: oklch(0.505 0.213 27.518);
-  --color-success: oklch(0.627 0.17 149.214);
-  --color-success-foreground: oklch(0.448 0.119 151.328);
+  --color-destructive: oklch(0.609 0.207 11.2); /* #e23663 */
+  --color-destructive-foreground: oklch(0.535 0.197 12.8);
+  --color-success: oklch(0.725 0.206 147.8); /* #17c752 */
+  --color-success-foreground: oklch(0.558 0.14 151.5);
   --color-warning: oklch(0.769 0.188 70.08);
   --color-warning-foreground: oklch(0.555 0.163 48.998);
   --color-info: oklch(0.623 0.214 259.815);
   --color-info-foreground: oklch(0.488 0.243 264.376);
+
+  /* Data series, in order of use (`stroke-chart-1`, `bg-chart-2`…). */
+  --color-chart-1: oklch(0.545 0.284 303.5); /* #9604f2 */
+  --color-chart-2: oklch(0.528 0.243 289.5); /* #713aea */
+  --color-chart-3: oklch(0.725 0.206 147.8); /* #17c752 */
 }
 
 :root {
@@ -52,18 +61,18 @@
   --color-popover: oklch(0.205 0 0);
   --color-popover-foreground: oklch(0.985 0 0);
 
-  --color-primary: oklch(0.922 0 0);
-  --color-primary-foreground: oklch(0.205 0 0);
+  --color-primary: oklch(0.776 0.118 306.2);
+  --color-primary-foreground: oklch(0.204 0.056 266.3);
   --color-secondary: oklch(0.269 0 0);
   --color-secondary-foreground: oklch(0.985 0 0);
   --color-muted: oklch(0.269 0 0);
   --color-muted-foreground: oklch(0.708 0 0);
-  --color-accent: oklch(0.269 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
+  --color-accent: oklch(0.3 0.08 306);
+  --color-accent-foreground: oklch(0.9 0.06 306);
 
   --color-border: oklch(1 0 0 / 10%);
   --color-input: oklch(1 0 0 / 15%);
-  --color-ring: oklch(0.556 0 0);
+  --color-ring: oklch(0.776 0.118 306.2);
 
   --color-destructive: oklch(0.704 0.191 22.216);
   --color-destructive-foreground: oklch(0.808 0.114 19.571);
@@ -73,4 +82,8 @@
   --color-warning-foreground: oklch(0.905 0.182 98.111);
   --color-info: oklch(0.707 0.165 254.624);
   --color-info-foreground: oklch(0.809 0.105 251.813);
+
+  --color-chart-1: oklch(0.7 0.2 304);
+  --color-chart-2: oklch(0.68 0.18 290);
+  --color-chart-3: oklch(0.723 0.219 149.579);
 }

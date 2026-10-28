@@ -1,6 +1,7 @@
 /* Entry point apps import: `@import '@repo/ui/styles.css';` */
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@fontsource-variable/inter';
 @import 'vue-sonner/style.css';
 @import './variables.css';
 @import './theme.css';
