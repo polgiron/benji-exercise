@@ -28,8 +28,9 @@ whole database. Every table that a customer would own gets a `customer_id` later
 4. **`events`** — the history of incoming calls (`POST /api/events`), one row per accepted
    event. `id` (`evt_…`), `event_type` → event_types, `payload` (JSON), `body` (the exact
    envelope bytes we sign and send, `{id, type, created_at, data}`), `idempotency_key`
-   **UNIQUE** (nullable), `request_hash` (sha256 of type + payload, to catch a key reused with
-   a different body), `created_at`. A re-submit with the same key adds no row; the response
+   **UNIQUE** (nullable), `created_at`. `payload` is what the caller sent (used to detect a key
+   reused for a different request); `body` is what we send (signed, byte-identical on every
+   retry). A re-submit with the same key adds no row; the response
    says `deduplicated: true` and points at the original event.
 5. **`deliveries`** — one row per (event, endpoint) pair, created by fan-out in the same
    transaction as the event: the outbox. `id` (`dlv_…`), `event_id`, `endpoint_id`, `status`
@@ -126,9 +127,9 @@ Each step is one commit and ends green (`uv run pytest`, `ruff`).
 
 **Idempotency on the way in.** `Idempotency-Key` is optional; without it every submit is a new
 event. With it: insert the event and catch `IntegrityError` on the UNIQUE column (never
-check-then-insert), then load the existing row. Same `payload_hash` (sha256 of canonical JSON
-of `type` + `payload`) → `200 {deduplicated: true, event}` and no new deliveries. Different
-hash → `422 idempotency_key_reused` (client bug; matches the IETF Idempotency-Key draft).
+check-then-insert), then load the existing row. Same `type` and same `payload` (compared as
+parsed JSON, so key order doesn't matter) → `200 {deduplicated: true, event}` and no new
+deliveries. Different → `422 idempotency_key_reused` (client bug; matches the IETF Idempotency-Key draft).
 
 **Uniqueness on the way out.** `fan_out(event)` uses `INSERT … ON CONFLICT (event_id,
 endpoint_id) DO NOTHING`, so calling it twice is a no-op, and the worker's claim is a single
