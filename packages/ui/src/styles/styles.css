@@ -9,6 +9,19 @@
 /* Scan this package's components for classes, wherever the app lives. */
 @source '../components';
 
+/* Decorative backdrops (empty states, KPI tiles). Mask them to fade the edges. */
+@utility bg-dots {
+  background-image: radial-gradient(var(--color-input) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--color-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-border) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {

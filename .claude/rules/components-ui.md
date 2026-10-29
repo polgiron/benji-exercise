@@ -8,13 +8,13 @@ paths:
 
 ### Components
 
-- One component per `.vue` file, PascalCase filename matching how it is used
-  (`DeliveryTimeline.vue` → `<DeliveryTimeline />`). Don't stack a `Foo` and a `FooRow` in one
+- One component per `.vue` file, named in kebab-case; Nuxt turns it into the PascalCase tag
+  (`delivery-timeline.vue` → `<DeliveryTimeline />`). Don't stack a `Foo` and a `FooRow` in one
   file through render functions — split into siblings.
 - `<script setup lang="ts">`, with props typed through `defineProps<Props>()` and an `interface Props`
   in the same file. Only **shared** shapes leave the component.
 - A feature that grows past a couple of files gets its folder under `app/components/<feature>/`.
-  Logic shared between components goes in a composable (`app/composables/use*.ts`); pure helpers with
+  Logic shared between components goes in a composable (`app/composables/use-*.ts`); pure helpers with
   no Vue in them go in `@repo/utils` or a `utils/` file.
 - No barrel `index.ts` that only re-exports siblings in the dashboard — Nuxt auto-imports components
   and composables. `packages/ui` is the exception: each shadcn-vue component folder keeps its
@@ -28,7 +28,8 @@ paths:
 
 - Compose from existing `@repo/ui` exports before writing new markup or pulling in another component
   library. If a primitive is missing, **add it to `@repo/ui`** (`pnpm dlx shadcn-vue@latest add <name>`
-  from `packages/ui`, then export it from `src/index.ts`) rather than inlining a one-off in the app.
+  from `packages/ui`, rename its files to kebab-case — shadcn-vue writes PascalCase — then export
+  it from `src/index.ts`) rather than inlining a one-off in the app.
 - Colours, radii and spacing come from the tokens in `packages/ui/src/styles/` — never a hex value or
   an arbitrary Tailwind colour in the app. Both the light and the dark theme must still read.
 - Don't put `size-*` / `w-*` / `h-*` on icons inside a `Button`: its variants size them. Non-size

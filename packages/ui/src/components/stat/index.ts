@@ -1,8 +1,8 @@
 import type { VariantProps } from 'class-variance-authority'
 import { cva } from 'class-variance-authority'
 
-export { default as Stat } from './Stat.vue'
-export { default as StatGrid } from './StatGrid.vue'
+export { default as StatGrid } from './stat-grid.vue'
+export { default as Stat } from './stat.vue'
 
 /** A labelled count: one tile of a StatGrid. */
 export const statValueVariants = cva('text-lg font-semibold tabular-nums', {

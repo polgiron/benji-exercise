@@ -3,8 +3,8 @@
  * (set on <html> by the app) swaps the same variables, so every
  * `bg-card`, `text-muted-foreground`… follows without `dark:` variants.
  *
- * Light palette sampled from the Benji partner dashboard: white surfaces with
- * hairline borders, navy ink, and a vivid purple brand with a lavender tint.
+ * Light palette from Benji's docs and Pilot dashboard: white surfaces with
+ * hairline borders, navy ink, and the vivid #90f brand purple with a lavender tint.
  */
 @theme {
   --color-background: oklch(1 0 0);
@@ -15,7 +15,11 @@
   --color-popover: oklch(1 0 0);
   --color-popover-foreground: oklch(0.204 0.056 266.3);
 
-  --color-primary: oklch(0.503 0.251 306.7); /* #8a10d0 */
+  /* The logo's colors: the same in both themes. */
+  --color-brand: oklch(0.56 0.296 301.9); /* #90f */
+  --color-brand-foreground: oklch(1 0 0);
+
+  --color-primary: oklch(0.56 0.296 301.9); /* #90f */
   --color-primary-foreground: oklch(1 0 0);
   --color-secondary: oklch(0.974 0.003 286.4); /* #f6f6f8 */
   --color-secondary-foreground: oklch(0.312 0.022 277.6); /* #2e303c */
@@ -23,11 +27,11 @@
   --color-muted-foreground: oklch(0.484 0.021 275.3); /* #5b5e6b */
   /* Lavender tint: hover rows, icon tiles, selected items. */
   --color-accent: oklch(0.939 0.035 309.8); /* #f2e5fd */
-  --color-accent-foreground: oklch(0.424 0.212 306.2); /* #6c0ba6 */
+  --color-accent-foreground: oklch(0.474 0.25 302.2); /* #7a00cc */
 
   --color-border: oklch(0.959 0.003 286.3); /* #f1f1f3 */
   --color-input: oklch(0.912 0.007 295.4); /* #e2e1e6 */
-  --color-ring: oklch(0.503 0.251 306.7);
+  --color-ring: oklch(0.56 0.296 301.9);
 
   /* Status: delivery states and feedback. `-foreground` is text on a tinted
      background of the same color (`bg-success/10 text-success-foreground`). */
@@ -41,9 +45,19 @@
   --color-info-foreground: oklch(0.488 0.243 264.376);
 
   /* Data series, in order of use (`stroke-chart-1`, `bg-chart-2`…). */
-  --color-chart-1: oklch(0.545 0.284 303.5); /* #9604f2 */
+  --color-chart-1: oklch(0.56 0.296 301.9); /* #90f */
   --color-chart-2: oklch(0.528 0.243 289.5); /* #713aea */
   --color-chart-3: oklch(0.725 0.206 147.8); /* #17c752 */
+  --color-chart-4: oklch(0.609 0.207 11.2); /* #e23663, failures */
+
+  /* Event types: one hue each, kept clear of the status hues (green, amber, blue, red) and
+     the brand purple. Same pairing as status: `bg-event-reward/10 text-event-reward-foreground`. */
+  --color-event-campaign: oklch(0.68 0.19 45); /* orange */
+  --color-event-campaign-foreground: oklch(0.53 0.17 42);
+  --color-event-member: oklch(0.68 0.12 195); /* teal */
+  --color-event-member-foreground: oklch(0.5 0.1 200);
+  --color-event-reward: oklch(0.63 0.24 335); /* fuchsia */
+  --color-event-reward-foreground: oklch(0.52 0.22 338);
 }
 
 :root {
@@ -86,4 +100,12 @@
   --color-chart-1: oklch(0.7 0.2 304);
   --color-chart-2: oklch(0.68 0.18 290);
   --color-chart-3: oklch(0.723 0.219 149.579);
+  --color-chart-4: oklch(0.704 0.191 22.216);
+
+  --color-event-campaign: oklch(0.75 0.16 50);
+  --color-event-campaign-foreground: oklch(0.85 0.11 55);
+  --color-event-member: oklch(0.75 0.12 195);
+  --color-event-member-foreground: oklch(0.86 0.08 195);
+  --color-event-reward: oklch(0.72 0.2 335);
+  --color-event-reward-foreground: oklch(0.85 0.12 335);
 }
