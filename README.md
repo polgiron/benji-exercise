@@ -1,215 +1,231 @@
 # Benji — webhook notification system
 
-Take-home for Benji's Senior Software Engineer role: customers register webhook endpoints,
-events fan out to them with signed, retried, deduplicated, replayable deliveries, and a
-dashboard shows every delivery live.
+When something happens at Benji (a member earns points, a campaign changes), a customer's own
+systems want to know right away. This project tells them with a **webhook**: an HTTP request
+sent to a URL the customer registered. It makes sure every webhook arrives, proves it really
+came from Benji, never sends the same one twice, lets you resend the ones that failed, and
+shows all of it live in a dashboard.
 
-- **Design & trade-offs:** [docs/PLAN.md](docs/PLAN.md)
-- **AI usage:** [docs/AI_USAGE.md](docs/AI_USAGE.md)
-- **What's built:** [below](#whats-built) · **Next steps:** [below](#next-steps)
+It is a take-home exercise for Benji's Senior Software Engineer role.
 
-## What's built
+- **Why it is built this way:** [docs/PLAN.md](docs/PLAN.md)
+- **How AI was used:** [docs/AI_USAGE.md](docs/AI_USAGE.md)
 
-### API (`apps/api`)
+**Words used below**
 
-- **Endpoints and subscriptions.** A customer registers a URL subscribed to one or more event
-  types. It can switch off the whole endpoint or a single event type. The signing secret is
-  returned once, at creation.
-- **Strict event catalogue.** Three event types, each with a JSON Schema checked on ingestion and
-  a sample payload.
-- **Idempotent ingestion.** An `Idempotency-Key` stored under a `UNIQUE` constraint, with a hash
-  of the request: the same key and body is deduplicated, the same key with another body is a
-  `422`. The event and its deliveries are written in one transaction.
-- **Reliable delivery.** A `deliveries` table worked by an in-process worker (outbox style, no
-  queue to run). Each delivery is claimed atomically under a lease, retried with exponential
-  backoff and jitter (`Retry-After` honoured) up to 5 attempts, and survives a restart because
-  its state lives in the database.
-- **Signed delivery.** [Standard Webhooks](https://www.standardwebhooks.com/) HMAC-SHA256 over
-  the id, timestamp and raw body, re-signed on every attempt.
-- **Replay** of failed deliveries, keeping the same `webhook-id` so receivers can dedupe.
-- **Observable.** An attempt log per delivery (status code, duration, error, response excerpt),
-  counts by status, activity over time, and an SSE stream of every state change.
-- **Demo tooling.** Mock receivers that verify the signature (`ok`, `fail`, `reject`, `flaky`,
-  `slow`), plus Seed and Reset.
+- **Event:** something that happened, like "campaign updated", with its details as JSON.
+- **Endpoint:** a URL a customer registered, with the kinds of event it wants to receive.
+- **Delivery:** one event sent to one endpoint. One event becomes as many deliveries as there
+  are endpoints that want it.
+- **Attempt:** one try at sending a delivery. A delivery can take several.
 
-### Dashboard (`apps/dashboard`)
+## Run it
 
-- **Overview.** A getting-started guide until the first delivery, a deliveries-over-time chart,
-  KPIs, a status breakdown, the latest deliveries live, and the endpoints.
-- **Deliveries.** A live table with status, attempts, a next-retry countdown and filters kept in
-  the URL. A row expands to its payload and attempt log, and failed rows can be replayed.
-- **Endpoints.** A list with an enable switch and a create dialog that shows the secret once. An
-  endpoint's page has a switch per event type, its stats and its deliveries.
-- **Test panel** (toggled from the header, not part of the customer's UI). Fire an event with a
-  payload and idempotency key and see whether it was deduplicated. It also lists the mock
-  receivers and the stream's live/reconnecting state, and has Seed and Reset.
-- **How it works.** An animated walk-through of a delivery and its retries, and of what the
-  signature proves to the receiver.
-- **Accuracy over time.** Stream updates are written into the Vue Query cache, and only a newer
-  `version` of a delivery is applied. Lists are refetched after a reconnect.
-- **Async UX.** Skeletons while loading, and empty states that suggest a next action. Buttons are
-  disabled while their request runs. A failed action shows a toast, and a failed load shows the
-  error in place with Try again. Light and dark themes.
-
-### A five-minute tour
-
-1. `pnpm dev`, open http://localhost:3000, then **Seed** in the test panel (header toggle).
-2. **Deliveries**: watch the live events settle, expand a failed one and **Replay** it.
-3. **Endpoints**: create one on `http://localhost:8000/mock/flaky?fail=2` and copy its secret.
-4. In the test panel, fire an event of a type it subscribes to. On **Deliveries**, its delivery
-   fails twice, then succeeds on the third attempt. Re-submit with the same key: it is reported
-   as deduplicated, and no delivery is added.
-5. **How it works** for the picture of what just happened.
-
-## Stack
-
-|                              |                                                                                           |
-| ---------------------------- | ----------------------------------------------------------------------------------------- |
-| `apps/api`                   | FastAPI, SQLAlchemy 2 (async) + SQLite, httpx — managed with **uv**                       |
-| `apps/dashboard`             | Nuxt 4 (SPA), TanStack Vue Query, Tailwind 4                                              |
-| `packages/ui`                | shadcn-vue components + shared styles: `variables.css` (tokens), `theme.css` (light/dark) |
-| `packages/utils`             | shared TS helpers (time formatting)                                                       |
-| `packages/eslint-config`     | flat ESLint configs: `base`, `vue`                                                        |
-| `packages/typescript-config` | `base.json`, `vue-library.json`                                                           |
-
-Turborepo + pnpm drive both apps; the API's `package.json` scripts wrap `uv run …`.
-
-Add a shadcn-vue component from `packages/ui`: `pnpm dlx shadcn-vue@latest add <name>`, then
-export it from `packages/ui/src/index.ts`. Apps import components from `@repo/ui` and styles
-with `@import '@repo/ui/styles.css';`.
-
-## Prerequisites
-
-- Node ≥ 22 and pnpm 10 (`corepack enable`)
-- [uv](https://docs.astral.sh/uv/) (`brew install uv`) — it installs Python 3.13 itself
-
-## Run
+You need Node 22 or later with pnpm 10 (`corepack enable`), and
+[uv](https://docs.astral.sh/uv/) (`brew install uv`), which installs Python by itself.
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-- API: http://localhost:8000 (OpenAPI docs at `/docs`)
 - Dashboard: http://localhost:3000
+- API: http://localhost:8000, with interactive docs at http://localhost:8000/docs
 
-Run one app only with `pnpm --filter @repo/api dev` or `pnpm --filter @repo/dashboard dev`.
+To run one app only: `pnpm --filter @repo/api dev` or `pnpm --filter @repo/dashboard dev`.
 
-## Test
+## What's built
+
+### A five-minute tour
+
+1. Run it, open http://localhost:3000, open the test panel from the header and click **Seed**.
+   It fills the app with a month of example data.
+2. **Deliveries**: watch the new events settle. Expand a failed one to see each attempt, then
+   **Replay** it.
+3. **Endpoints**: create one with the URL `http://localhost:8000/mock/flaky?fail=2`, a fake
+   receiver that fails twice before it accepts. Copy the secret: it is shown only once.
+4. In the test panel, send an event of a kind that endpoint wants. On **Deliveries**, its
+   delivery fails twice, then succeeds on the third attempt. Send it again with the same key:
+   the panel says it was a duplicate, and nothing new is sent.
+5. **How it works** shows what just happened, step by step.
+
+### The API (`apps/api`)
+
+- **Endpoints.** A customer registers a URL and picks which kinds of event it wants. They can
+  pause the whole endpoint or a single kind of event. At creation they get a secret key to check
+  our signatures. It is shown only that once.
+- **Three kinds of event**: reward transaction created, campaign updated, member account linked.
+  Each has a strict format, and an event that doesn't match it is refused.
+- **No duplicate events.** Whoever sends us an event attaches a key of their choice (the
+  `Idempotency-Key` header). If the same event arrives again with the same key, say after a
+  network glitch, we recognise it and send nothing new. The same key with different content is
+  refused as an error.
+- **Deliveries are never lost.** Each delivery is saved in the database before it is sent, and a
+  loop running inside the API sends whatever is due. If the receiver is down or too slow, we try
+  again later, waiting longer each time: up to 2 s, then 4 s, 8 s… and never more than 30 s. Each
+  wait is cut by a random amount, so receivers that failed together aren't all retried at the
+  same moment. After 5 attempts the delivery is marked failed. If the
+  receiver asks us to wait a given time, we do. Restarting the API loses nothing.
+- **Signed.** Every request carries a signature made from the endpoint's secret and the content,
+  following the [Standard Webhooks](https://www.standardwebhooks.com/) spec. The receiver
+  recomputes it to check that the request came from us, wasn't changed and is recent.
+- **Replay.** A failed delivery can be sent again once the customer has fixed their server. It
+  keeps the same id, so the receiver can tell it's the same message.
+- **Everything is visible.** Each attempt is recorded: the response code, how long it took, the
+  error, and the start of the response. There are counts by status, activity over time, and a
+  live feed of every change that the dashboard listens to.
+- **Demo tools.** Fake receivers inside the API check the signature, then answer: always OK,
+  always an error, a refusal, fail the first N times, or too slow. **Seed** fills the database
+  with example data and **Reset** empties it.
+
+### The dashboard (`apps/dashboard`)
+
+- **Overview.** A getting-started guide until the first delivery, a chart of deliveries over
+  time, key numbers, a breakdown by status, the latest deliveries live, and the endpoints.
+- **Deliveries.** A live table: status, attempts so far, a countdown to the next retry. Filters
+  are kept in the URL, so a filtered view can be shared. A row opens to show the event's content
+  and every attempt, and failed rows can be replayed.
+- **Endpoints.** The list, with a switch to pause each one, and a form to create one that shows
+  the secret once. Each endpoint has its own page with a switch per kind of event, its numbers
+  and its deliveries.
+- **Test panel.** Opened from the header, and not part of what a customer would see. Send an
+  event with the content and key you choose, and see whether it was a duplicate. It also lists
+  the fake receivers, shows whether the live feed is connected, and has Seed and Reset.
+- **How it works.** An animated walk-through of a delivery and its retries, and of what the
+  signature proves to the receiver.
+- **Stays accurate.** Changes arrive live and update the screen in place. An update that arrives
+  late never overwrites a newer one. If the live connection drops, the dashboard reloads
+  everything once it's back.
+- **Waiting and errors.** Placeholders while a page loads, and empty pages that say what to do
+  next. Buttons are disabled while they work. A failed action shows a short message, and a page
+  that fails to load says so with a **Try again** button. Light and dark themes.
+
+## Tests
 
 ```bash
 pnpm test
 ```
 
-Runs pytest for the API and Vitest for the dashboard and utils. API tests alone:
+This runs the API tests (pytest) and the dashboard and utils tests (Vitest). API tests alone:
 `cd apps/api && uv run pytest`.
 
-### Where each guarantee is proved
+The tests control the clock and fake the network, so they are fast and never wait. Where each
+promise is checked (files in `apps/api/tests/` unless noted):
 
-The worker runs one cycle at a time with an injected HTTP transport and clock, so these tests
-are deterministic and never sleep.
+- **Retries** (`test_retry.py`): a receiver that fails twice then works. Giving up after the last
+  attempt. Timeouts and lost connections are retried, refusals (4xx) are not. "Wait N seconds"
+  answers are respected, and waits grow but stay capped. A delivery left half-sent by a crashed
+  loop is picked up again.
+- **No duplicates** (`test_uniqueness.py`): the same key twice makes one event. The same key with
+  different content is refused. Two identical requests at the same moment make one event. An
+  event never makes two deliveries for the same endpoint. Two sending loops running at once send
+  a delivery only once (`test_retry.py::test_concurrent_cycles_send_once`).
+- **Replay** (`test_replay.py`): a failed delivery is replayed until it succeeds, with a fresh set
+  of attempts and the same id. A delivery that succeeded, is still pending, or whose endpoint is
+  paused can't be replayed.
+- **Signatures** (`test_signing.py`): a valid signature passes. Changed content, id or time, the
+  wrong secret, or a time too old or in the future all fail. The requests we send verify with the
+  secret given at creation, and each retry is signed again with a fresh time.
+- **End to end** (`test_end_to_end.py`): the running app against its fake receivers.
+- **Live view** (`test_stream.py`, and the dashboard's `utils/delivery-cache.test.ts`): a
+  delivery's changes reach the live feed, and an older update never overwrites a newer one.
 
-| guarantee      | tests (`apps/api/tests/`)                                                                                                                                                                                                                                                                                               |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Retry**      | `test_retry.py`: fails twice then succeeds; ends `failed` after max attempts; timeouts and connection errors retried; 4xx terminal; 429 `Retry-After` honoured; backoff capped and jittered; expired lease reclaimed                                                                                                    |
-| **Uniqueness** | `test_uniqueness.py`: same key twice → one event, no new deliveries; key order doesn't matter; same key + other payload or type → 422; concurrent submits with one key; fan-out twice → one delivery per endpoint. `test_retry.py::test_concurrent_cycles_send_once`; the `UNIQUE` constraints in `test_foundations.py` |
-| **Replay**     | `test_replay.py`: failed → replayed until it succeeds; a full new series of attempts; same event and `webhook-id`; succeeded or pending → 409; paused endpoint → 409                                                                                                                                                    |
-| **Signing**    | `test_signing.py`: valid signature passes; tampered body, message id or timestamp, wrong secret, stale or future timestamp fail; the outgoing request verifies with the secret from creation; retries re-sign a fresh timestamp over the same id and body                                                               |
-| **End to end** | `test_end_to_end.py`: the app with its `/mock/*` receivers — flaky succeeds on the 3rd attempt, reject is terminal, a bad signature is refused                                                                                                                                                                          |
-| **Live view**  | `test_stream.py` (a delivery's lifecycle over SSE); dashboard `utils/delivery-cache.test.ts` (only a newer `version` applies, every cached list and detail patched)                                                                                                                                                     |
+## Using the API
 
-## API
+The full design is in [docs/PLAN.md](docs/PLAN.md) and [docs/API_PLAN.md](docs/API_PLAN.md).
+You can try every call from http://localhost:8000/docs.
 
-Full design: [docs/PLAN.md](docs/PLAN.md) and [docs/API_PLAN.md](docs/API_PLAN.md). Interactive
-docs at http://localhost:8000/docs.
+| call                               | what it does                                                                 |
+| ---------------------------------- | ---------------------------------------------------------------------------- |
+| `GET /api/event-types`             | The kinds of event, with their format and an example                         |
+| `GET`, `POST /api/endpoints`       | List endpoints, or create one (the secret is only in this response)          |
+| `GET`, `PATCH /api/endpoints/{id}` | Read one, pause or resume it, change its URL or its kinds of event           |
+| `POST /api/events`                 | Send an event (with an `Idempotency-Key` header): one delivery per endpoint  |
+| `GET /api/events`                  | Past events                                                                  |
+| `GET /api/deliveries`              | Deliveries, filtered by `status`, `endpoint_id`, `event_id` or `event_type`  |
+| `GET /api/deliveries/stats`        | How many deliveries are in each status                                       |
+| `GET /api/deliveries/activity`     | Deliveries over time, for the chart                                          |
+| `GET /api/deliveries/{id}`         | One delivery, with its content and every attempt                             |
+| `POST /api/deliveries/{id}/replay` | Send a failed delivery again                                                 |
+| `GET /api/stream`                  | The live feed: a message each time a delivery changes                        |
+| `POST /mock/{ok,fail,reject}`      | Fake receivers: check the signature, then accept, error or refuse            |
+| `POST /mock/flaky?fail=N`          | Fake receiver that fails the first N times for each message, then accepts    |
+| `POST /mock/slow?seconds=S`        | Fake receiver that answers after S seconds (15 by default, past our timeout) |
+| `POST /api/demo/reset`             | **Deletes** all endpoints, events and deliveries                             |
+| `POST /api/demo/seed`              | **Deletes** everything, then adds a month of example data                    |
 
-| method     | path                          | purpose                                                             |
-| ---------- | ----------------------------- | ------------------------------------------------------------------- |
-| GET        | `/api/event-types`            | catalogue: description, JSON Schema, sample payload                 |
-| GET / POST | `/api/endpoints`              | list / create (the signing secret is returned only here)            |
-| GET, PATCH | `/api/endpoints/{id}`         | read / enable, disable, change URL or event types                   |
-| POST       | `/api/events`                 | publish an event (`Idempotency-Key` header), fans out               |
-| GET        | `/api/events`                 | incoming event history                                              |
-| GET        | `/api/deliveries`             | list, filter by `status`, `endpoint_id`, `event_id`, `event_type`   |
-| GET        | `/api/deliveries/stats`       | counts by status (`endpoint_id` filter optional)                    |
-| GET        | `/api/deliveries/activity`    | deliveries per time bucket (`range`, `endpoint_id`)                 |
-| GET        | `/api/deliveries/{id}`        | detail: payload + attempt log                                       |
-| POST       | `/api/deliveries/{id}/replay` | re-queue a failed delivery                                          |
-| GET        | `/api/stream`                 | SSE: `delivery.updated` after every delivery state change           |
-| POST       | `/mock/{ok,fail,reject}`      | demo receivers (verify the signature, then answer)                  |
-| POST       | `/mock/flaky?fail=N`          | fails the first N requests per message, then 200                    |
-| POST       | `/mock/slow?seconds=S`        | answers after S seconds (default 15, past the 10 s timeout)         |
-| POST       | `/api/demo/reset`             | **wipes** endpoints, events, deliveries (event types stay)          |
-| POST       | `/api/demo/seed`              | **wipes** endpoints, events, deliveries; seeds a month of demo data |
+When something goes wrong, the answer always looks like
+`{"error": {"code": "...", "message": "..."}}`.
 
-Errors always look like `{"error": {"code": "...", "message": "..."}}`.
-
-### Try it
-
-For a filled dashboard, use **Seed** at the top of the test panel (or
-`curl -X POST localhost:8000/api/demo/seed`): it deletes everything first, then writes six
-endpoints on the mock receivers, a month of their deliveries, and a few live events. **Reset**
-next to it only empties the database.
+### Try it from the terminal
 
 ```bash
+# An endpoint on the receiver that fails twice
 curl -s localhost:8000/api/endpoints -H 'content-type: application/json' \
   -d '{"url": "http://localhost:8000/mock/flaky?fail=2", "event_types": ["campaign_updated"]}'
 
+# An event for it
 curl -s localhost:8000/api/events -H 'content-type: application/json' -H 'Idempotency-Key: demo-1' \
   -d '{"event_type": "campaign_updated", "payload": {"campaign_id": "cmp_7", "name": "Double points",
        "status": "active", "starts_at": "2026-11-01T00:00:00Z"}}'
 
-curl -sN localhost:8000/api/stream   # watch it go pending → in_progress → pending → … → succeeded
+# The live feed: pending → in_progress → pending (waiting to retry) → … → succeeded
+curl -sN localhost:8000/api/stream
 ```
 
-Run the second command again: same key, same body → `200 {"deduplicated": true}` and no new
-delivery. Same key, different body → `422 idempotency_key_reused`.
+Send the event again with the same key and content: the answer is
+`200 {"deduplicated": true}`, and nothing new is sent. Same key, different content:
+`422 idempotency_key_reused`.
 
-### Delivery guarantees
+### What a receiver can count on
 
-- **At least once.** Only a 2xx is success. Timeouts, network errors, 408/425/429 and 5xx are
-  retried with exponential backoff and jitter (`Retry-After` honoured), up to 5 attempts, then
-  `failed`. Other 4xx are terminal. Failed deliveries can be replayed.
-- **Once per endpoint.** `UNIQUE(event_id, endpoint_id)`, and each delivery is claimed
-  atomically by one worker at a time. If we crash between the receiver's 200 and recording it,
-  it is sent again: receivers dedupe on `webhook-id`, which never changes for a delivery.
-- **No ordering guarantee.** Use the envelope's `created_at`.
+- **Every webhook arrives at least once.** Only a 2xx answer counts as received. Timeouts,
+  network errors, "busy" answers (408, 425, 429) and server errors (5xx) are retried, up to 5
+  attempts. Any other 4xx means the receiver refused it, so we stop. Failed deliveries can be
+  replayed.
+- **Never twice, with one exception.** An event makes one delivery per endpoint, and only one
+  sending loop works on a delivery at a time. But if we crash right after the receiver answered
+  OK and before we saved that, it is sent again after the restart. Every message carries a
+  `webhook-id` that never changes, so the receiver can skip one it has already handled.
+- **Not in order.** Webhooks can arrive in any order. Use the `created_at` inside each message to
+  sort them.
 
-### Verifying a webhook (receiver side)
+### Checking a webhook's signature (receiver side)
 
-Signatures follow [Standard Webhooks](https://www.standardwebhooks.com/), so any of its libraries
-work. With ours (`apps/api/app/signing.py`, no dependencies beyond the standard library):
+Any [Standard Webhooks](https://www.standardwebhooks.com/) library works. Ours is
+`apps/api/app/signing.py` and only needs Python's standard library. Check the raw request body,
+before turning it into JSON. A request more than 5 minutes old is refused, so a captured request
+can't be sent again later by someone else.
 
 ```python
 from app.signing import InvalidSignature, verify
 
 def handle(raw_body: bytes, headers, secret: str):
     try:
-        verify(secret, headers, raw_body)  # raw bytes, before json.loads; 5-minute tolerance
+        verify(secret, headers, raw_body)
     except InvalidSignature:
         return 401
     ...
 ```
 
-### Configuration
+### Settings
 
-Environment variables (prefix `BENJI_`, or `apps/api/.env`): `DATABASE_URL`,
-`RETRY_BASE_SECONDS` (2), `RETRY_CAP_SECONDS` (30), `MAX_ATTEMPTS` (5), `HTTP_TIMEOUT_SECONDS`
-(10), `LEASE_SECONDS` (30), `MOCK_RECEIVERS` (true). Delays are seconds so a demo settles in
-under a minute. The SQLite file is `apps/api/benji.db`; delete it to start fresh.
+Set them as environment variables with a `BENJI_` prefix, or in `apps/api/.env`. The waits are
+in seconds so a demo settles in under a minute. A real system would use minutes to hours.
 
-## Other scripts
-
-| command          | does                                                                                |
-| ---------------- | ----------------------------------------------------------------------------------- |
-| `pnpm typecheck` | `nuxt typecheck`, `vue-tsc` (ui), `tsc` (utils)                                     |
-| `pnpm lint`      | ruff (API), ESLint (dashboard, ui, utils)                                           |
-| `pnpm format`    | Prettier on everything but the API (ruff formats Python)                            |
-| `pnpm gen:api`   | dumps FastAPI's OpenAPI schema and regenerates `apps/dashboard/app/api/schema.d.ts` |
+| setting                | default                         | what it controls                                                 |
+| ---------------------- | ------------------------------- | ---------------------------------------------------------------- |
+| `DATABASE_URL`         | SQLite file `apps/api/benji.db` | The database. Delete the file to start fresh                     |
+| `RETRY_BASE_SECONDS`   | 2                               | The first wait before a retry                                    |
+| `RETRY_CAP_SECONDS`    | 30                              | The longest wait between retries                                 |
+| `MAX_ATTEMPTS`         | 5                               | Attempts before a delivery is marked failed                      |
+| `HTTP_TIMEOUT_SECONDS` | 10                              | How long we wait for a receiver to answer                        |
+| `LEASE_SECONDS`        | 30                              | After this, a delivery stuck mid-send (crash) is picked up again |
+| `MOCK_RECEIVERS`       | true                            | Turns the fake receivers and Seed on (off in a real deployment)  |
 
 ## Next steps
 
-What was cut to fit a day, and what comes next. The reasoning behind each cut is in
+What was left out to fit in a day, and what would come next. The reasoning is in
 [docs/PLAN.md §10](docs/PLAN.md#10-scope-cuts-deliberate-and-next-steps).
 
 **Before production**
@@ -220,26 +236,51 @@ Shortcuts this demo takes that a real system couldn't:
   would get an API key and only see their own endpoints and deliveries.
 - **Secret encryption.** Signing secrets sit in the database as plain text. They should be
   encrypted, and changing a secret should keep the old one working for a while.
-- **Postgres and separate workers.** SQLite allows one write at a time, and the worker runs
-  inside the API process. With Postgres, several worker processes can share the queue without
-  picking the same delivery.
-- **Durable stream.** Live updates aren't stored anywhere, so after a reconnect the dashboard
-  refetches everything. A stored stream would let it resume where it stopped.
+- **Postgres and separate workers.** SQLite allows one write at a time, and the sending loop runs
+  inside the API process. With Postgres, several separate sending processes can share the work
+  without picking the same delivery.
+- **Durable live feed.** Live updates aren't stored anywhere, so after a reconnect the dashboard
+  reloads everything. A stored feed would let it resume where it stopped.
 - **Pagination.** Lists stop at 500 rows. Pages would let you browse all of them.
-- **Retention.** Payloads and attempt logs are kept forever. Old ones should be deleted after a
+- **Retention.** Event contents and attempts are kept forever. Old ones should be deleted after a
   set time.
 
 **Product**
 
-- **Auto-disable an endpoint after N consecutive failures** and tell the customer, plus **bulk
-  replay** ("replay all failed for this endpoint"): break an endpoint, fix it, re-enable, replay.
-- **"Send test event" on an endpoint's page**, as Stripe and Svix offer.
-- **Event-type versioning**: ship a `v2` of one type, pin a version on each subscription, and
-  down-convert the payload for subscribers still on `v1`. The catalogue already promises that
-  removing, renaming or retyping a field needs a new version.
-- **An Events page** grouping deliveries by event (`GET /api/events` exists), and editing an
-  endpoint's URL from the dashboard (`PATCH` exists; it needs a confirm step).
+- **Pause failing endpoints, resend in bulk.** After N failures in a row, pause the endpoint and
+  tell the customer. Once it's fixed, resend all its failed deliveries in one click.
+- **A "send a test event" button** on each endpoint's page, as Stripe and Svix have.
+- **Versions of an event's format.** Today a format can only gain fields. To rename or remove
+  one, we'd publish a version 2, let each endpoint pick its version, and convert messages for
+  endpoints still on version 1.
+- **An Events page** listing each event with its deliveries, and **changing an endpoint's URL**
+  from the dashboard. The API already supports both.
 
 **Quality**
 
-- **End-to-end tests** with Playwright: create an endpoint → fire an event → see it succeed.
+- **Browser tests** (Playwright) that click through the app: create an endpoint, send an event,
+  see it succeed.
+
+## How the code is organised
+
+One repository holds both apps and the code they share. pnpm and Turborepo run them together.
+
+| folder                       | what's in it                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `apps/api`                   | The API: FastAPI, SQLAlchemy with SQLite, httpx. Python, managed with uv         |
+| `apps/dashboard`             | The dashboard: Nuxt 4 (runs in the browser only), TanStack Vue Query, Tailwind 4 |
+| `packages/ui`                | Shared UI components (shadcn-vue) and styles: colours, spacing, light and dark   |
+| `packages/utils`             | Shared TypeScript helpers (time formatting)                                      |
+| `packages/eslint-config`     | Shared lint rules                                                                |
+| `packages/typescript-config` | Shared TypeScript settings                                                       |
+
+To add a UI component, run `pnpm dlx shadcn-vue@latest add <name>` in `packages/ui`, then export
+it from `packages/ui/src/index.ts`. Apps import components from `@repo/ui`, and styles with
+`@import '@repo/ui/styles.css';`.
+
+| command          | what it does                                                                              |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| `pnpm typecheck` | Checks types in the dashboard, ui and utils                                               |
+| `pnpm lint`      | Lints everything: ruff for the API, ESLint for the rest                                   |
+| `pnpm format`    | Formats everything but the API with Prettier (ruff formats Python)                        |
+| `pnpm gen:api`   | Regenerates the dashboard's API types (`apps/dashboard/app/api/schema.d.ts`) from the API |
