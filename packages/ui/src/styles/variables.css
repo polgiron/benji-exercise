@@ -43,6 +43,8 @@
   /* Layout sizes: `h-topbar`, `pt-topbar`, `max-w-content`, `w-panel`. */
   --spacing-topbar: 3.5rem;
   --spacing-panel: 24rem;
+  /* Narrowest stat tile before a StatGrid wraps to the next row. */
+  --spacing-stat: 6.5rem;
   --container-content: 72rem;
 
   /* Motion */

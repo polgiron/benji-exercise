@@ -14,6 +14,12 @@ export const badgeVariants = cva(
         destructive:
           'border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60',
         outline: 'text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground',
+        // Soft status tones (delivery states): a tint behind the status's `-foreground`.
+        success: 'border-transparent bg-success/10 text-success-foreground',
+        warning: 'border-transparent bg-warning/10 text-warning-foreground',
+        info: 'border-transparent bg-info/10 text-info-foreground',
+        danger: 'border-transparent bg-destructive/10 text-destructive-foreground',
+        code: 'border-transparent bg-secondary text-secondary-foreground font-mono text-2xs',
       },
     },
     defaultVariants: {
