@@ -98,6 +98,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/deliveries/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Delivery Stats
+         * @description Counts by status over all deliveries (not just a listed page).
+         */
+        get: operations["delivery_stats_api_deliveries_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/deliveries/{delivery_id}": {
         parameters: {
             query?: never;
@@ -330,6 +350,37 @@ export interface components {
             };
             /** Attempts */
             attempts: components["schemas"]["AttemptOut"][];
+        };
+        /**
+         * DeliveryStats
+         * @description Delivery counts by status; every status is present, 0 when there are none.
+         */
+        DeliveryStats: {
+            /**
+             * Pending
+             * @default 0
+             */
+            pending: number;
+            /**
+             * In Progress
+             * @default 0
+             */
+            in_progress: number;
+            /**
+             * Succeeded
+             * @default 0
+             */
+            succeeded: number;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
         };
         /**
          * DeliveryStatus
@@ -769,6 +820,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliverySummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delivery_stats_api_deliveries_stats_get: {
+        parameters: {
+            query?: {
+                endpoint_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryStats"];
                 };
             };
             /** @description Validation Error */

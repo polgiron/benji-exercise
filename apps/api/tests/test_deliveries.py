@@ -42,3 +42,24 @@ async def test_unknown_delivery(client):
     r = await client.get("/api/deliveries/dlv_nope")
     assert r.status_code == 404
     assert r.json()["error"]["code"] == "not_found"
+
+
+async def test_stats_count_by_status(client, make_endpoint, fire, worker, receiver):
+    empty = (await client.get("/api/deliveries/stats")).json()
+    assert empty == {"pending": 0, "in_progress": 0, "succeeded": 0, "failed": 0, "total": 0}
+
+    ok = await make_endpoint(url="https://ok.example.com/")
+    await make_endpoint(url="https://bad.example.com/")
+    receiver.respond(200, 400)
+    await fire()
+    await worker.run_once()  # one succeeds, one is rejected
+    await fire()  # two more, still pending
+
+    stats = (await client.get("/api/deliveries/stats")).json()
+    assert stats == {"pending": 2, "in_progress": 0, "succeeded": 1, "failed": 1, "total": 4}
+
+    per_endpoint = (
+        await client.get("/api/deliveries/stats", params={"endpoint_id": ok["id"]})
+    ).json()
+    assert per_endpoint["total"] == 2
+    assert per_endpoint["pending"] == 1

@@ -101,3 +101,13 @@ class AttemptOut(Model):
 class DeliveryDetail(DeliverySummary):
     payload: dict[str, Any]
     attempts: list[AttemptOut]
+
+
+class DeliveryStats(BaseModel):
+    """Delivery counts by status; every status is present, 0 when there are none."""
+
+    pending: int = 0
+    in_progress: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    total: int = 0

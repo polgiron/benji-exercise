@@ -1,13 +1,13 @@
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clock import utcnow
 from app.config import Settings
 from app.errors import ApiError, not_found
 from app.models import Delivery, DeliveryAttempt, DeliveryStatus
-from app.schemas import AttemptOut, DeliveryDetail, DeliverySummary
+from app.schemas import AttemptOut, DeliveryDetail, DeliveryStats, DeliverySummary
 
 
 def summarize(delivery: Delivery, settings: Settings) -> DeliverySummary:
@@ -45,6 +45,14 @@ async def list_deliveries(
     if event_id:
         stmt = stmt.where(Delivery.event_id == event_id)
     return (await session.scalars(stmt)).all()
+
+
+async def stats(session: AsyncSession, endpoint_id: str | None = None) -> DeliveryStats:
+    stmt = select(Delivery.status, func.count()).group_by(Delivery.status)
+    if endpoint_id:
+        stmt = stmt.where(Delivery.endpoint_id == endpoint_id)
+    counts = {status: n for status, n in (await session.execute(stmt)).all()}
+    return DeliveryStats(**counts, total=sum(counts.values()))
 
 
 async def summaries(

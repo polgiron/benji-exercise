@@ -401,6 +401,56 @@
         }
       }
     },
+    "/api/deliveries/stats": {
+      "get": {
+        "tags": [
+          "deliveries"
+        ],
+        "summary": "Delivery Stats",
+        "description": "Counts by status over all deliveries (not just a listed page).",
+        "operationId": "delivery_stats_api_deliveries_stats_get",
+        "parameters": [
+          {
+            "name": "endpoint_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Endpoint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryStats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/deliveries/{delivery_id}": {
       "get": {
         "tags": [
@@ -853,6 +903,38 @@
           "attempts"
         ],
         "title": "DeliveryDetail"
+      },
+      "DeliveryStats": {
+        "properties": {
+          "pending": {
+            "type": "integer",
+            "title": "Pending",
+            "default": 0
+          },
+          "in_progress": {
+            "type": "integer",
+            "title": "In Progress",
+            "default": 0
+          },
+          "succeeded": {
+            "type": "integer",
+            "title": "Succeeded",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "DeliveryStats",
+        "description": "Delivery counts by status; every status is present, 0 when there are none."
       },
       "DeliveryStatus": {
         "type": "string",

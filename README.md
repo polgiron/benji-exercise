@@ -63,6 +63,7 @@ docs at http://localhost:8000/docs.
 | POST       | `/api/events`                 | publish an event (`Idempotency-Key` header), fans out       |
 | GET        | `/api/events`                 | incoming event history                                      |
 | GET        | `/api/deliveries`             | list, filter by `status`, `endpoint_id`, `event_id`         |
+| GET        | `/api/deliveries/stats`       | counts by status (`endpoint_id` filter optional)            |
 | GET        | `/api/deliveries/{id}`        | detail: payload + attempt log                               |
 | POST       | `/api/deliveries/{id}/replay` | re-queue a failed delivery                                  |
 | GET        | `/api/stream`                 | SSE: `delivery.updated` after every delivery state change   |
