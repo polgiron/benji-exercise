@@ -2,6 +2,7 @@
 import { DatabaseZap, LoaderCircle } from '@lucide/vue'
 import {
   Button,
+  Card,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,7 +26,7 @@ function confirm() {
 </script>
 
 <template>
-  <section class="space-y-2">
+  <Card class="gap-3 p-4">
     <div>
       <h3 class="text-sm font-medium">Demo data</h3>
       <p class="text-xs text-muted-foreground">
@@ -33,7 +34,7 @@ function confirm() {
         to show. A few live events follow, for the worker to retry as you watch.
       </p>
     </div>
-    <Button variant="outline" size="sm" @click="open = true">
+    <Button variant="outline" size="sm" class="w-fit" @click="open = true">
       <DatabaseZap />
       Reset and seed…
     </Button>
@@ -56,5 +57,5 @@ function confirm() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </section>
+  </Card>
 </template>

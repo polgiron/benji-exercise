@@ -91,7 +91,7 @@ Errors always look like `{"error": {"code": "...", "message": "..."}}`.
 
 ### Try it
 
-For a filled dashboard, use **Reset and seed…** at the bottom of the test panel (or
+For a filled dashboard, use **Reset and seed…** at the top of the test panel (or
 `curl -X POST localhost:8000/api/demo/seed`): it deletes everything first, then writes six
 endpoints on the mock receivers, a month of their deliveries, and a few live events.
 
