@@ -11,6 +11,7 @@ class Model(BaseModel):
 class EventTypeOut(Model):
     key: str
     description: str
+    payload_schema: dict[str, Any]
     sample_payload: dict[str, Any]
 
 

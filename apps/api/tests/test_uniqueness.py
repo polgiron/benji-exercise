@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 
 from app.models import Delivery, Event
 from app.services.events import fan_out
+from tests.conftest import sample
 
 
 async def count(db, model):
@@ -33,14 +34,15 @@ async def test_same_key_twice_creates_one_event_and_no_new_deliveries(db, make_e
 
 
 async def test_key_order_in_the_payload_does_not_matter(fire):
-    await fire(payload={"a": 1, "b": 2}, key="key-1")
-    r = await fire(payload={"b": 2, "a": 1}, key="key-1")
+    payload = sample()
+    await fire(payload=payload, key="key-1")
+    r = await fire(payload=dict(reversed(payload.items())), key="key-1")
     assert r.json()["deduplicated"] is True
 
 
 async def test_same_key_different_payload_is_rejected(db, fire):
-    await fire(payload={"campaign_id": "cmp_7"}, key="key-1")
-    r = await fire(payload={"campaign_id": "cmp_8"}, key="key-1")
+    await fire(payload=sample(name="A"), key="key-1")
+    r = await fire(payload=sample(name="B"), key="key-1")
     assert r.status_code == 422
     assert r.json()["error"]["code"] == "idempotency_key_reused"
     assert await count(db, Event) == 1

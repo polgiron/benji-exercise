@@ -51,6 +51,8 @@ class EventType(Base):
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     description: Mapped[str] = mapped_column(Text)
+    # JSON Schema (draft 2020-12) every payload of this type must satisfy.
+    payload_schema: Mapped[dict[str, Any]] = mapped_column(JSON)
     sample_payload: Mapped[dict[str, Any]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
 

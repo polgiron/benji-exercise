@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clock import utcnow
 from app.errors import ApiError
+from app.event_types import validate_payload
 from app.ids import new_id
 from app.models import Delivery, DeliveryStatus, Endpoint, Event, EventType, Subscription
 
@@ -43,8 +44,10 @@ async def publish_event(
     and its deliveries are written in one transaction (transactional outbox): nothing is
     sent from here, the worker picks the rows up.
     """
-    if await session.get(EventType, event_type) is None:
+    type_row = await session.get(EventType, event_type)
+    if type_row is None:
         raise ApiError(422, "unknown_event_type", f"Unknown event type: {event_type}")
+    validate_payload(type_row, payload)
 
     digest = request_hash(event_type, payload)
     now = utcnow()

@@ -13,8 +13,11 @@ whole database. Every table that a customer would own gets a `customer_id` later
 
 1. **`event_types`** — the catalogue of events we can send. `key` (PK, e.g.
    `reward_transaction_created`, `campaign_updated`, `member_account_linked`), `description`,
-   `sample_payload` (JSON, prefills the dashboard's test form), `created_at`. Seeded at startup
-   (insert-if-missing), read-only through the API. Every other table references it by FK, so an
+   `payload_schema` (JSON Schema, the contract: strict, `additionalProperties: false`, every
+   event is validated against it → `422 invalid_payload`), `sample_payload` (valid by test,
+   prefills the dashboard's test form), `created_at`. Customers are told that adding a field
+   is non-breaking; removing, renaming or retyping one needs a new version (not built). Seeded at startup
+   (upserted from code), read-only through the API. Every other table references it by FK, so an
    unknown type can't be subscribed to or fired.
 2. **`endpoints`** — the customer's subscriptions: a URL plus the event types it wants
    (an endpoint _is_ the subscription, as in Stripe). `id` (`ep_…`), `url`, `description`,

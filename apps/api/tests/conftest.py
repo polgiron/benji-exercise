@@ -43,11 +43,18 @@ def make_endpoint(client):
     return make
 
 
+def sample(event_type: str = "campaign_updated", **overrides):
+    from app.event_types import EVENT_TYPES
+
+    [t] = [t for t in EVENT_TYPES if t["key"] == event_type]
+    return {**t["sample_payload"], **overrides}
+
+
 @pytest.fixture
 def fire(client):
     async def fire(event_type="campaign_updated", payload=None, key=None):
         headers = {"Idempotency-Key": key} if key else {}
-        body = {"event_type": event_type, "payload": payload or {"campaign_id": "cmp_7"}}
+        body = {"event_type": event_type, "payload": payload or sample(event_type)}
         return await client.post("/api/events", json=body, headers=headers)
 
     return fire
