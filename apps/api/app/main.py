@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import Settings, settings
 from app.db import Database
 from app.errors import install_error_handlers
+from app.routes import endpoints, event_types
 
 
 def create_app(config: Settings = settings) -> FastAPI:
@@ -28,6 +29,8 @@ def create_app(config: Settings = settings) -> FastAPI:
         allow_headers=["*"],
     )
     install_error_handlers(app)
+    app.include_router(event_types.router)
+    app.include_router(endpoints.router)
 
     @app.get("/api/health")
     async def health() -> dict[str, str]:
