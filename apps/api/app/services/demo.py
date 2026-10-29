@@ -77,7 +77,11 @@ DEMO_ENDPOINTS = [
         ("reward_transaction_created",),
         lambda n: ([UNAVAILABLE] * 2 + [OK])[:n],
     ),
-    DemoEndpoint("ok", "Campaign mirror", ("campaign_updated",), lambda _: [OK]),
+    # A real customer's servers each have their own URL; the query only tells the two
+    # /mock/ok endpoints apart (the receiver ignores it).
+    DemoEndpoint(
+        "ok?receiver=campaign-mirror", "Campaign mirror", ("campaign_updated",), lambda _: [OK]
+    ),
     DemoEndpoint(
         "fail",
         "Partner bridge (down)",

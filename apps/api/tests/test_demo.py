@@ -24,8 +24,10 @@ async def test_seed_replaces_everything_that_was_there(client, make_endpoint, fi
         assert await s.scalar(select(func.count()).select_from(Event)) == seeded["events"]
         assert await s.scalar(select(func.count()).select_from(Delivery)) == seeded["deliveries"]
         assert await s.scalar(select(func.count()).select_from(EventType)) == 3
-    urls = {e["url"] for e in (await client.get("/api/endpoints")).json()}
+    urls = [e["url"] for e in (await client.get("/api/endpoints")).json()]
     assert all(url.startswith("http://test/mock/") for url in urls)
+    # Two endpoints on one URL would show each event twice under what looks like one receiver.
+    assert len(set(urls)) == len(urls)
 
 
 async def test_seeding_twice_does_not_add_up(client, db):
