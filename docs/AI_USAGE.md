@@ -46,4 +46,5 @@ drafted, scaffolded and implemented under review.
 
 ## Chat trail
 
-The session transcripts are exported to `docs/chat/` at the end of the work.
+Every session and thread is exported as Markdown in [docs/chat/](chat/README.md): the claude.ai
+project (main thread and its sub-threads) and the Claude Code desktop sessions.
