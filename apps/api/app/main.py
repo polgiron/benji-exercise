@@ -11,6 +11,7 @@ from app.db import Database
 from app.errors import install_error_handlers
 from app.routes import deliveries, endpoints, event_types, events, mock, stream
 from app.services.deliveries import summaries
+from app.shutdown import on_exit_signal
 from app.worker import DeliveryWorker
 
 
@@ -42,7 +43,9 @@ def create_app(
         app.state.worker = worker
         if run_worker:
             worker.start()
+        restore_signals = on_exit_signal(bus.close)
         yield
+        restore_signals()
         await worker.stop()
         await db.dispose()
 

@@ -82,3 +82,21 @@ async def test_slow_subscriber_is_dropped_not_blocking():
         assert bus.subscriber_count == 0
         assert queue.get_nowait() == ("delivery.updated", {"i": 1})
         assert queue.get_nowait() is None  # end of stream: reconnect and refetch
+
+
+async def test_closing_the_bus_ends_open_streams_and_new_ones():
+    bus = Bus()
+
+    async def is_disconnected():
+        return False
+
+    async def read_all():
+        return [chunk async for chunk in event_stream(bus, is_disconnected, heartbeat=10)]
+
+    reader = asyncio.create_task(read_all())
+    await asyncio.sleep(0.01)
+    bus.close()
+    chunks = await asyncio.wait_for(reader, 1)  # ends instead of waiting for the client
+    assert parse(chunks[1])[0] == "ready"
+    assert bus.subscriber_count == 0
+    assert len(await asyncio.wait_for(read_all(), 1)) == 2  # retry + ready, then the end
