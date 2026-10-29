@@ -31,6 +31,11 @@ function toggle(key: string, subscribed: boolean) {
       <Skeleton class="h-5 w-9 rounded-full" />
     </li>
   </ul>
+  <LoadError
+    v-else-if="eventTypes.isError.value"
+    :message="eventTypes.error.value?.message"
+    @retry="eventTypes.refetch()"
+  />
   <ul v-else class="divide-y">
     <li
       v-for="type in eventTypes.data.value"

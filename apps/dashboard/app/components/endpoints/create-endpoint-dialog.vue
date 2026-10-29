@@ -94,18 +94,29 @@ watch(open, (isOpen) => {
         </div>
         <fieldset class="space-y-2">
           <legend class="mb-2 text-sm font-medium">Event types</legend>
-          <div v-for="type in eventTypes.data.value" :key="type.key" class="flex items-start gap-2">
-            <Checkbox
-              :id="`endpoint-type-${type.key}`"
-              :model-value="selected.includes(type.key)"
-              class="mt-0.5"
-              @update:model-value="(checked) => toggleType(type.key, checked === true)"
-            />
-            <Label :for="`endpoint-type-${type.key}`" class="grid gap-1 font-normal">
-              <EventTypeBadge :type="type.key" />
-              <span class="text-xs text-muted-foreground">{{ type.description }}</span>
-            </Label>
-          </div>
+          <LoadError
+            v-if="eventTypes.isError.value"
+            :message="eventTypes.error.value?.message"
+            @retry="eventTypes.refetch()"
+          />
+          <template v-else>
+            <div
+              v-for="type in eventTypes.data.value"
+              :key="type.key"
+              class="flex items-start gap-2"
+            >
+              <Checkbox
+                :id="`endpoint-type-${type.key}`"
+                :model-value="selected.includes(type.key)"
+                class="mt-0.5"
+                @update:model-value="(checked) => toggleType(type.key, checked === true)"
+              />
+              <Label :for="`endpoint-type-${type.key}`" class="grid gap-1 font-normal">
+                <EventTypeBadge :type="type.key" />
+                <span class="text-xs text-muted-foreground">{{ type.description }}</span>
+              </Label>
+            </div>
+          </template>
         </fieldset>
         <DialogFooter>
           <Button variant="outline" type="button" @click="open = false">Cancel</Button>

@@ -27,7 +27,10 @@ defineEmits<{ retry: [] }>()
       <EmptyDescription>{{ message ?? 'Something went wrong.' }}</EmptyDescription>
     </EmptyHeader>
     <EmptyContent>
-      <Button variant="outline" size="sm" @click="$emit('retry')"><RotateCcw /> Try again</Button>
+      <!-- type="button": inside a form (the create-endpoint dialog) it must not submit it. -->
+      <Button variant="outline" size="sm" type="button" @click="$emit('retry')">
+        <RotateCcw /> Try again
+      </Button>
     </EmptyContent>
   </Empty>
 </template>

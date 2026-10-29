@@ -50,6 +50,20 @@ pnpm test
 Runs pytest for the API and Vitest for the dashboard and utils. API tests alone:
 `cd apps/api && uv run pytest`.
 
+### Where each guarantee is proved
+
+The worker runs one cycle at a time with an injected HTTP transport and clock, so these tests
+are deterministic and never sleep.
+
+| guarantee      | tests (`apps/api/tests/`)                                                                                                                                                                                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Retry**      | `test_retry.py`: fails twice then succeeds; ends `failed` after max attempts; timeouts and connection errors retried; 4xx terminal; 429 `Retry-After` honoured; backoff capped and jittered; expired lease reclaimed                                                                                                    |
+| **Uniqueness** | `test_uniqueness.py`: same key twice → one event, no new deliveries; key order doesn't matter; same key + other payload or type → 422; concurrent submits with one key; fan-out twice → one delivery per endpoint. `test_retry.py::test_concurrent_cycles_send_once`; the `UNIQUE` constraints in `test_foundations.py` |
+| **Replay**     | `test_replay.py`: failed → replayed until it succeeds; a full new series of attempts; same event and `webhook-id`; succeeded or pending → 409; paused endpoint → 409                                                                                                                                                    |
+| **Signing**    | `test_signing.py`: valid signature passes; tampered body, message id or timestamp, wrong secret, stale or future timestamp fail; the outgoing request verifies with the secret from creation; retries re-sign a fresh timestamp over the same id and body                                                               |
+| **End to end** | `test_end_to_end.py`: the app with its `/mock/*` receivers — flaky succeeds on the 3rd attempt, reject is terminal, a bad signature is refused                                                                                                                                                                          |
+| **Live view**  | `test_stream.py` (a delivery's lifecycle over SSE); dashboard `utils/delivery-cache.test.ts` (only a newer `version` applies, every cached list and detail patched)                                                                                                                                                     |
+
 ## API
 
 Full design: [docs/PLAN.md](docs/PLAN.md) and [docs/API_PLAN.md](docs/API_PLAN.md). Interactive
