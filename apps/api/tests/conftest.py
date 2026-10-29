@@ -15,7 +15,7 @@ def settings(tmp_path) -> Settings:
 
 @pytest.fixture
 async def app(settings) -> AsyncIterator[FastAPI]:
-    app = create_app(settings)
+    app = create_app(settings, run_worker=False)
     async with app.router.lifespan_context(app):
         yield app
 
@@ -115,11 +115,16 @@ def receiver() -> Receiver:
 
 
 @pytest.fixture
-async def worker(db, settings, clock, receiver):
+async def worker(app, db, settings, clock, receiver):
     from app.worker import DeliveryWorker
 
     w = DeliveryWorker(
-        db, settings, transport=httpx.MockTransport(receiver), clock=clock, rand=lambda: 1.0
+        db,
+        settings,
+        transport=httpx.MockTransport(receiver),
+        clock=clock,
+        rand=lambda: 1.0,
+        on_change=app.state.on_delivery_change,
     )
     yield w
     await w.stop()
