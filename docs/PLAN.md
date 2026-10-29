@@ -27,12 +27,14 @@ wrap `uv run …` so `pnpm dev` / `pnpm test` drive both apps. Shared packages: 
 (shadcn-vue components, design tokens, light/dark theme), `@repo/utils`, `@repo/eslint-config`,
 `@repo/typescript-config`.
 
-## 2. Data model (SQLite, SQLAlchemy 2 async + aiosqlite)
+## 2. Data model (SQLite, SQLAlchemy 2 async + aiosqlite; column detail in [API_PLAN.md](API_PLAN.md))
 
 | table               | key columns                                                                                                                                                               | notes                                         |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `endpoints`         | `id`, `url`, `event_types` (JSON), `secret`, `enabled`, `created_at`                                                                                                      | single implicit customer (multi-tenancy cut)  |
-| `events`            | `id`, `type`, `payload` (JSON), `idempotency_key` **UNIQUE**, `payload_hash`, `created_at`                                                                                | dedup of re-submits                           |
+| `event_types`       | `key` PK, `description`, `sample_payload` (JSON)                                                                                                                          | catalogue, seeded at startup                  |
+| `endpoints`         | `id`, `url`, `description`, `secret`, `enabled`, `created_at`                                                                                                             | single implicit customer (multi-tenancy cut)  |
+| `subscriptions`     | `endpoint_id`, `event_type` → event_types; **PK(endpoint_id, event_type)**                                                                                                | which types each endpoint listens to          |
+| `events`            | `id`, `event_type`, `payload` (JSON), `body`, `idempotency_key` **UNIQUE**, `request_hash`, `created_at`                                                                  | dedup of re-submits                           |
 | `deliveries`        | `id`, `event_id`, `endpoint_id`, `status`, `attempt_count`, `next_attempt_at`, `lease_expires_at`, `last_error`, `version`, timestamps; **UNIQUE(event_id, endpoint_id)** | one row = one (event, endpoint) pair, forever |
 | `delivery_attempts` | `id`, `delivery_id`, `number`, `started_at`, `duration_ms`, `response_status`, `response_body` (truncated 2 KB), `error`, `trigger` (`auto` / `replay`)                   | append-only history                           |
 

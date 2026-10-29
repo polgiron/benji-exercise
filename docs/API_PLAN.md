@@ -4,19 +4,74 @@ The design (data model, retry policy, signing, uniqueness, live view) lives in
 [PLAN.md](PLAN.md). This doc is the build order for the backend: what goes where, in which
 order, and which tests land with each step. Budget: ~3 hours.
 
-## What we're building
+## What we're building, in detail
 
-A FastAPI service over SQLite that:
+### Tables
 
-1. stores **endpoints** (URL + subscribed event types + a signing secret shown once);
-2. accepts **events** with an `Idempotency-Key`, and in the same transaction fans them out
-   into one **delivery** row per enabled, subscribed endpoint (transactional outbox);
-3. runs an in-process **worker** that atomically claims due deliveries, signs and POSTs them,
-   logs every **attempt**, and reschedules failures with exponential backoff + jitter until
-   success or `failed`;
-4. lets a failed delivery be **replayed** (same delivery row, same event id, attempts continue);
-5. pushes every delivery state change over **SSE** so the dashboard stays live;
-6. ships **mock receivers** (`ok`, `fail`, `flaky`, `slow`, `reject`) to demo and test each path.
+One implicit customer for now (auth and multi-tenancy are cut), so "the user's" data is the
+whole database. Every table that a customer would own gets a `customer_id` later.
+
+1. **`event_types`** — the catalogue of events we can send. `key` (PK, e.g.
+   `reward_transaction_created`, `campaign_updated`, `member_account_linked`), `description`,
+   `sample_payload` (JSON, prefills the dashboard's test form), `created_at`. Seeded at startup
+   (insert-if-missing), read-only through the API. Every other table references it by FK, so an
+   unknown type can't be subscribed to or fired.
+2. **`endpoints`** — where a customer wants events sent. `id` (`ep_…`), `url`, `description`,
+   `secret` (`whsec_…`, returned once at creation, never by a GET), `enabled`, `created_at`,
+   `updated_at`.
+3. **`subscriptions`** — which event types each endpoint listens to. `endpoint_id` → endpoints,
+   `event_type` → event_types, **PK(endpoint_id, event_type)**. A join table rather than a JSON
+   column, so fan-out is one indexed join and the FK enforces the catalogue.
+4. **`events`** — the history of incoming calls (`POST /api/events`), one row per accepted
+   event. `id` (`evt_…`), `event_type` → event_types, `payload` (JSON), `body` (the exact
+   envelope bytes we sign and send, `{id, type, created_at, data}`), `idempotency_key`
+   **UNIQUE** (nullable), `request_hash` (sha256 of type + payload, to catch a key reused with
+   a different body), `created_at`. A re-submit with the same key adds no row; the response
+   says `deduplicated: true` and points at the original event.
+5. **`deliveries`** — one row per (event, endpoint) pair, created by fan-out in the same
+   transaction as the event: the outbox. `id` (`dlv_…`), `event_id`, `endpoint_id`, `status`
+   (`pending` / `in_progress` / `succeeded` / `failed`), `attempt_count`, `next_attempt_at`,
+   `lease_expires_at`, `last_error`, `version` (bumped on every change, used by the live view),
+   `created_at`, `updated_at`. **UNIQUE(event_id, endpoint_id)** is what makes "never delivered
+   twice to the same endpoint" a database guarantee.
+6. **`delivery_attempts`** — the history of outgoing calls, append-only. `id` (`att_…`),
+   `delivery_id`, `number` (1, 2, 3… continuing across replays), `trigger` (`auto` / `replay`),
+   `started_at`, `duration_ms`, `response_status`, `response_body` (first 2 KB), `error`
+   (`timeout`, `connection_error`, …). This is what the dashboard's attempt log shows.
+
+### Behaviour on top of the tables
+
+7. **Signing** — every request carries `webhook-id` (stable across retries), `webhook-timestamp`
+   and `webhook-signature` (HMAC-SHA256 over `id.timestamp.body`, Standard Webhooks). Signed
+   fresh per attempt; a `verify()` helper ships for receivers.
+8. **Delivery worker** — an asyncio task started with the app. It claims due deliveries
+   atomically (`pending` → `in_progress` with a 30 s lease), POSTs them with a 10 s timeout,
+   then records the attempt and the new status in one transaction.
+9. **Retry policy** — 2xx = success; network errors, timeouts, 408, 429 (honouring
+   `Retry-After`) and 5xx are retried with exponential backoff + full jitter; other 4xx are
+   terminal. After 5 attempts → `failed`. Delays are seconds in dev so the demo is watchable.
+10. **Replay** — `failed` → `pending` on the same delivery row, same event id; new attempts are
+    appended with `trigger = replay`. Replaying anything else is a 409.
+11. **Live stream** — `GET /api/stream` (SSE) pushes the delivery summary after every status
+    change; the dashboard writes it into its query cache and refetches on reconnect.
+12. **Mock receivers** — `/mock/ok`, `/fail`, `/flaky?fail=N`, `/slow`, `/reject`, which verify
+    the signature like a real customer would. Used by the demo and the end-to-end test.
+13. **One error shape** — `{"error": {"code", "message"}}` for every failure, validation
+    included, so the dashboard has a single error path.
+
+### API routes
+
+| method     | path                          | purpose                                               |
+| ---------- | ----------------------------- | ----------------------------------------------------- |
+| GET        | `/api/event-types`            | the catalogue, with sample payloads                   |
+| GET / POST | `/api/endpoints`              | list / create (create returns the secret once)        |
+| PATCH      | `/api/endpoints/{id}`         | enable / disable, change subscribed event types       |
+| POST       | `/api/events`                 | fire an event (`Idempotency-Key` header)              |
+| GET        | `/api/events`                 | incoming call history, newest first                   |
+| GET        | `/api/deliveries`             | list, filter by `status` / `endpoint_id` / `event_id` |
+| GET        | `/api/deliveries/{id}`        | detail: payload + attempt log                         |
+| POST       | `/api/deliveries/{id}/replay` | re-queue a failed delivery                            |
+| GET        | `/api/stream`                 | SSE                                                   |
 
 ## Module layout
 
@@ -25,11 +80,11 @@ app/
   main.py            app factory, lifespan (create tables, start/stop worker), routers, errors
   config.py          settings: db url, retry base/cap/max attempts, lease, timeouts, tolerance
   db.py              async engine + session; SQLite WAL + busy_timeout; create_all (no Alembic)
-  models.py          Endpoint, Event, Delivery, DeliveryAttempt (+ unique constraints)
+  models.py          EventType, Endpoint, Subscription, Event, Delivery, DeliveryAttempt
   schemas.py         Pydantic request/response models (source of the OpenAPI contract)
   ids.py             prefixed ids: ep_, evt_, dlv_, att_
   errors.py          ApiError + handlers → {"error": {"code", "message"}} for every failure
-  event_types.py     catalogue + sample payloads
+  event_types.py     seed data for the event_types table (keys, descriptions, samples)
   signing.py         generate_secret(), sign(), verify()  — no FastAPI imports
   retry.py           pure policy: classify(response | exc) and next_delay(attempt, retry_after)
   clock.py           injectable now() so tests control time
@@ -52,17 +107,17 @@ don't know about HTTP routing. That keeps the four graded behaviours testable wi
 
 Each step is one commit and ends green (`uv run pytest`, `ruff`).
 
-| #   | step                     | content                                                                                                                                         | tests                                                                    |
-| --- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| 1   | Foundations              | config, db (WAL, `busy_timeout`), models + constraints, ids, error envelope (incl. validation errors), tmp-DB fixtures                           | constraint smoke test; error shape on a 404 and a 422                    |
-| 2   | Signing                  | `whsec_` secret generation, `sign(secret, msg_id, ts, body)`, `verify(secret, headers, body, tolerance)` with `hmac.compare_digest`             | round-trip; tampered body, wrong secret, stale and future timestamp fail |
-| 3   | Endpoints                | `GET/POST /api/endpoints`, `PATCH /{id}` (enabled, event types); secret only in the create response; URL + known event types validated          | secret absent from list; unknown event type → 422                        |
-| 4   | Events + fan-out         | `GET /api/event-types`, `POST /api/events`; envelope body serialised **once** and stored, so every attempt sends identical bytes                | see Uniqueness below; only enabled + subscribed endpoints get rows       |
-| 5   | Retry policy + worker    | `retry.py` pure functions; `worker.run_once(transport, clock)`: claim → send (semaphore, 10 s timeout) → record attempt + new state atomically   | see Retry below; `run_once` used directly, no sleeps                     |
-| 6   | Deliveries API + replay  | `GET /api/deliveries?status=&endpoint_id=`, `GET /{id}` (payload + attempts), `POST /{id}/replay` (only from `failed`, else 409)                  | see Replay below                                                         |
-| 7   | Live stream              | `bus.publish(delivery_summary)` after every transition; `GET /api/stream` as `text/event-stream`, heartbeat comment every 15 s                    | subscriber receives `pending → in_progress → succeeded` in order         |
-| 8   | Mock receivers + wiring  | `/mock/{ok,fail,flaky,slow,reject}`; flaky fails N times per `webhook-id`; receivers verify the signature; worker started in lifespan            | end-to-end: create endpoint on `/mock/flaky` → fire → succeeded          |
-| 9   | Contract + docs          | `pnpm gen:api` (OpenAPI → `schema.d.ts`), README API section, signature-verification snippet                                                     | —                                                                        |
+| #   | step                    | content                                                                                                                                         | tests                                                                    |
+| --- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1   | Foundations             | config, db (WAL, `busy_timeout`, FKs on), models + constraints, event-type seed, ids, error envelope (incl. validation errors), tmp-DB fixtures | constraint smoke test; error shape on a 404 and a 422                    |
+| 2   | Signing                 | `whsec_` secret generation, `sign(secret, msg_id, ts, body)`, `verify(secret, headers, body, tolerance)` with `hmac.compare_digest`             | round-trip; tampered body, wrong secret, stale and future timestamp fail |
+| 3   | Endpoints               | `GET/POST /api/endpoints`, `PATCH /{id}` (enabled, event types); secret only in the create response; URL + known event types validated          | secret absent from list; unknown event type → 422                        |
+| 4   | Events + fan-out        | `GET /api/event-types`, `POST` / `GET /api/events`; envelope body serialised **once** and stored, so every attempt sends identical bytes        | see Uniqueness below; only enabled + subscribed endpoints get rows       |
+| 5   | Retry policy + worker   | `retry.py` pure functions; `worker.run_once(transport, clock)`: claim → send (semaphore, 10 s timeout) → record attempt + new state atomically  | see Retry below; `run_once` used directly, no sleeps                     |
+| 6   | Deliveries API + replay | `GET /api/deliveries?status=&endpoint_id=`, `GET /{id}` (payload + attempts), `POST /{id}/replay` (only from `failed`, else 409)                | see Replay below                                                         |
+| 7   | Live stream             | `bus.publish(delivery_summary)` after every transition; `GET /api/stream` as `text/event-stream`, heartbeat comment every 15 s                  | subscriber receives `pending → in_progress → succeeded` in order         |
+| 8   | Mock receivers + wiring | `/mock/{ok,fail,flaky,slow,reject}`; flaky fails N times per `webhook-id`; receivers verify the signature; worker started in lifespan           | end-to-end: create endpoint on `/mock/flaky` → fire → succeeded          |
+| 9   | Contract + docs         | `pnpm gen:api` (OpenAPI → `schema.d.ts`), README API section, signature-verification snippet                                                    | —                                                                        |
 
 ## Design details settled for the build
 
