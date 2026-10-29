@@ -28,9 +28,15 @@ watch(
   },
   { immediate: true },
 )
-watch(selected, (type) => {
-  if (type) form.payloadText.value = JSON.stringify(type.sample_payload, null, 2)
-})
+// Immediate: with the catalogue already cached, `selected` is set before this watcher exists
+// (the panel re-opened), so it would never see a change and the payload would stay empty.
+watch(
+  selected,
+  (type) => {
+    if (type) form.payloadText.value = JSON.stringify(type.sample_payload, null, 2)
+  },
+  { immediate: true },
+)
 
 const error = computed(() => {
   const value = form.mutation.error.value

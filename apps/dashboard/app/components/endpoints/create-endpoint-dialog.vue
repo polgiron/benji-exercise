@@ -12,6 +12,7 @@ import {
   Input,
   Label,
 } from '@repo/ui'
+import { type IMockReceiver, MOCK_RECEIVERS, mockReceiverUrl } from '~/api/mock'
 
 const open = defineModel<boolean>('open', { required: true })
 
@@ -26,6 +27,16 @@ const secret = ref<string>()
 
 function toggleType(key: string, checked: boolean) {
   selected.value = checked ? [...selected.value, key] : selected.value.filter((k) => k !== key)
+}
+
+const MOCK_DESCRIPTIONS = new Set(MOCK_RECEIVERS.map((receiver) => receiver.does))
+
+function pickMock(receiver: IMockReceiver) {
+  url.value = mockReceiverUrl(receiver.path)
+  // Describe it too, unless the reviewer wrote their own: a list of mocks reads better labelled.
+  if (!description.value || MOCK_DESCRIPTIONS.has(description.value)) {
+    description.value = receiver.does
+  }
 }
 
 function submit() {
@@ -85,6 +96,22 @@ watch(open, (isOpen) => {
             placeholder="https://example.com/webhooks"
             class="font-mono"
           />
+          <div class="flex flex-wrap items-center gap-1 pt-1">
+            <span class="mr-1 text-xs text-muted-foreground">Or a mock receiver:</span>
+            <Button
+              v-for="receiver in MOCK_RECEIVERS"
+              :key="receiver.path"
+              type="button"
+              size="xs"
+              :variant="url === mockReceiverUrl(receiver.path) ? 'secondary' : 'outline'"
+              :aria-pressed="url === mockReceiverUrl(receiver.path)"
+              :title="`${receiver.answer} · ${receiver.does}`"
+              class="font-mono"
+              @click="pickMock(receiver)"
+            >
+              /mock/{{ receiver.path }}
+            </Button>
+          </div>
         </div>
         <div class="space-y-1.5">
           <Label for="endpoint-description"
