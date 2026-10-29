@@ -138,14 +138,14 @@ spinner while in flight; errors from the one `ApiError` shape as toasts, branchi
 Starts once PR #3 (the API) is merged. Each step ends with `pnpm typecheck`, `pnpm lint`,
 `pnpm test` green, and steps 3–6 are checked in a browser against the `/mock/*` receivers.
 
-| #   | step                     | content                                                                     | checks                                                                       |
-| --- | ------------------------ | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 1   | Layout                   | header + nav, test panel shell, overview / deliveries / endpoints pages     | pages route; both themes read                                                |
-| 2   | API layer + keys         | `api/*.ts`, key factory, query/mutation composables                         | Vitest: a function per route builds the right request; error mapping         |
-| 3   | Endpoints                | list, create dialog + secret reveal, endpoint page with both switches       | browser: create → secret once → reload → secret gone; unsubscribe a type     |
-| 4   | Fire event               | form, schema, key handling, result banner, mock receivers                   | browser: fire → N deliveries; re-submit → deduplicated; bad payload → field |
+| #   | step                     | content                                                                       | checks                                                                       |
+| --- | ------------------------ | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 1   | Layout                   | header + nav, test panel shell, overview / deliveries / endpoints pages       | pages route; both themes read                                                |
+| 2   | API layer + keys         | `api/*.ts`, key factory, query/mutation composables                           | Vitest: a function per route builds the right request; error mapping         |
+| 3   | Endpoints                | list, create dialog + secret reveal, endpoint page with both switches         | browser: create → secret once → reload → secret gone; unsubscribe a type     |
+| 4   | Fire event               | form, schema, key handling, result banner, mock receivers                     | browser: fire → N deliveries; re-submit → deduplicated; bad payload → field  |
 | 5   | Deliveries + live stream | table, filters in URL, expandable row, replay, `useDeliveryStream`, countdown | Vitest on `deliveryCache.ts`; browser: flaky receiver goes live to succeeded |
-| 6   | Overview + polish        | the two cards with stats, empty / loading / error states                    | browser: stop the API → reconnecting; restart → caught up without refresh   |
+| 6   | Overview + polish        | the two cards with stats, empty / loading / error states                      | browser: stop the API → reconnecting; restart → caught up without refresh    |
 
 ## Tests
 
@@ -161,11 +161,11 @@ Starts once PR #3 (the API) is merged. Each step ends with `pnpm typecheck`, `pn
 
 ## Cut, and next steps
 
-| cut                                 | next step                                       |
-| ----------------------------------- | ----------------------------------------------- |
-| Collapsible / responsive test panel | toggle in the header, sheet on narrow screens   |
-| Events history page (`GET /events`) | an Events page grouping deliveries by event     |
-| Pagination                          | cursor pagination once the API has it           |
-| Editing an endpoint's URL           | `PATCH url` is there; needs a confirm UX        |
-| Bulk replay                         | "replay all failed for this endpoint"           |
-| e2e tests                           | Playwright: create endpoint → fire → succeeded  |
+| cut                                 | next step                                      |
+| ----------------------------------- | ---------------------------------------------- |
+| Collapsible / responsive test panel | toggle in the header, sheet on narrow screens  |
+| Events history page (`GET /events`) | an Events page grouping deliveries by event    |
+| Pagination                          | cursor pagination once the API has it          |
+| Editing an endpoint's URL           | `PATCH url` is there; needs a confirm UX       |
+| Bulk replay                         | "replay all failed for this endpoint"          |
+| e2e tests                           | Playwright: create endpoint → fire → succeeded |
