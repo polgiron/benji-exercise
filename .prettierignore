@@ -3,3 +3,5 @@ apps/api
 apps/dashboard/app/api/schema.d.ts
 .nuxt
 .output
+docs/chat/*
+!docs/chat/README.md
