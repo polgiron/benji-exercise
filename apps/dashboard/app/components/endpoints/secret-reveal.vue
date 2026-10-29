@@ -12,7 +12,9 @@ const { copy, copied } = useClipboard({ copiedDuring: 1500 })
 </script>
 
 <template>
-  <div class="space-y-3">
+  <!-- min-w-0: as a grid item of the dialog it would otherwise grow to the secret's full
+       width, so the secret never truncates and the Copy button overflows. -->
+  <div class="min-w-0 space-y-3">
     <Alert variant="warning">
       <TriangleAlert />
       <AlertDescription>
