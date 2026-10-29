@@ -16,12 +16,15 @@ whole database. Every table that a customer would own gets a `customer_id` later
    `sample_payload` (JSON, prefills the dashboard's test form), `created_at`. Seeded at startup
    (insert-if-missing), read-only through the API. Every other table references it by FK, so an
    unknown type can't be subscribed to or fired.
-2. **`endpoints`** — where a customer wants events sent. `id` (`ep_…`), `url`, `description`,
+2. **`endpoints`** — the customer's subscriptions: a URL plus the event types it wants
+   (an endpoint _is_ the subscription, as in Stripe). `id` (`ep_…`), `url`, `description`,
    `secret` (`whsec_…`, returned once at creation, never by a GET), `enabled`, `created_at`,
    `updated_at`.
-3. **`subscriptions`** — which event types each endpoint listens to. `endpoint_id` → endpoints,
-   `event_type` → event_types, **PK(endpoint_id, event_type)**. A join table rather than a JSON
-   column, so fan-out is one indexed join and the FK enforces the catalogue.
+3. **`endpoint_event_types`** — not a separate concept, just the link rows behind an endpoint's
+   list of event types (many-to-many): `endpoint_id` → endpoints, `event_type` → event_types,
+   **PK(endpoint_id, event_type)**. Never exposed on its own: the API reads and writes
+   `event_types: [...]` on the endpoint. Chosen over a JSON column so the FK enforces the
+   catalogue and fan-out is one indexed join.
 4. **`events`** — the history of incoming calls (`POST /api/events`), one row per accepted
    event. `id` (`evt_…`), `event_type` → event_types, `payload` (JSON), `body` (the exact
    envelope bytes we sign and send, `{id, type, created_at, data}`), `idempotency_key`
@@ -80,7 +83,7 @@ app/
   main.py            app factory, lifespan (create tables, start/stop worker), routers, errors
   config.py          settings: db url, retry base/cap/max attempts, lease, timeouts, tolerance
   db.py              async engine + session; SQLite WAL + busy_timeout; create_all (no Alembic)
-  models.py          EventType, Endpoint, Subscription, Event, Delivery, DeliveryAttempt
+  models.py          EventType, Endpoint, EndpointEventType, Event, Delivery, DeliveryAttempt
   schemas.py         Pydantic request/response models (source of the OpenAPI contract)
   ids.py             prefixed ids: ep_, evt_, dlv_, att_
   errors.py          ApiError + handlers → {"error": {"code", "message"}} for every failure

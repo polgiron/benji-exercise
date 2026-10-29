@@ -29,14 +29,14 @@ wrap `uv run …` so `pnpm dev` / `pnpm test` drive both apps. Shared packages: 
 
 ## 2. Data model (SQLite, SQLAlchemy 2 async + aiosqlite; column detail in [API_PLAN.md](API_PLAN.md))
 
-| table               | key columns                                                                                                                                                               | notes                                         |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `event_types`       | `key` PK, `description`, `sample_payload` (JSON)                                                                                                                          | catalogue, seeded at startup                  |
-| `endpoints`         | `id`, `url`, `description`, `secret`, `enabled`, `created_at`                                                                                                             | single implicit customer (multi-tenancy cut)  |
-| `subscriptions`     | `endpoint_id`, `event_type` → event_types; **PK(endpoint_id, event_type)**                                                                                                | which types each endpoint listens to          |
-| `events`            | `id`, `event_type`, `payload` (JSON), `body`, `idempotency_key` **UNIQUE**, `request_hash`, `created_at`                                                                  | dedup of re-submits                           |
-| `deliveries`        | `id`, `event_id`, `endpoint_id`, `status`, `attempt_count`, `next_attempt_at`, `lease_expires_at`, `last_error`, `version`, timestamps; **UNIQUE(event_id, endpoint_id)** | one row = one (event, endpoint) pair, forever |
-| `delivery_attempts` | `id`, `delivery_id`, `number`, `started_at`, `duration_ms`, `response_status`, `response_body` (truncated 2 KB), `error`, `trigger` (`auto` / `replay`)                   | append-only history                           |
+| table                  | key columns                                                                                                                                                               | notes                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `event_types`          | `key` PK, `description`, `sample_payload` (JSON)                                                                                                                          | catalogue, seeded at startup                  |
+| `endpoints`            | `id`, `url`, `description`, `secret`, `enabled`, `created_at`                                                                                                             | single implicit customer (multi-tenancy cut)  |
+| `endpoint_event_types` | `endpoint_id`, `event_type` → event_types; **PK(endpoint_id, event_type)**                                                                                                | link rows behind an endpoint's event types    |
+| `events`               | `id`, `event_type`, `payload` (JSON), `body`, `idempotency_key` **UNIQUE**, `request_hash`, `created_at`                                                                  | dedup of re-submits                           |
+| `deliveries`           | `id`, `event_id`, `endpoint_id`, `status`, `attempt_count`, `next_attempt_at`, `lease_expires_at`, `last_error`, `version`, timestamps; **UNIQUE(event_id, endpoint_id)** | one row = one (event, endpoint) pair, forever |
+| `delivery_attempts`    | `id`, `delivery_id`, `number`, `started_at`, `duration_ms`, `response_status`, `response_body` (truncated 2 KB), `error`, `trigger` (`auto` / `replay`)                   | append-only history                           |
 
 Status machine: `pending → in_progress → succeeded | pending (retry scheduled) | failed`,
 and `failed → pending` via Replay. `version` increments on every change (used by the UI, §6).
