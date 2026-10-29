@@ -118,6 +118,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/deliveries/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Delivery Activity
+         * @description Deliveries created per time bucket, oldest first, zero-filled. Declared before
+         *     `/{delivery_id}`, which would otherwise take "activity" as an id.
+         */
+        get: operations["delivery_activity_api_deliveries_activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/deliveries/{delivery_id}": {
         parameters: {
             query?: never;
@@ -284,6 +305,28 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ActivityBucket
+         * @description Deliveries created in [start, start + bucket_seconds), split by their current status.
+         */
+        ActivityBucket: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /** Total */
+            total: number;
+            /** Succeeded */
+            succeeded: number;
+            /** Failed */
+            failed: number;
+        };
+        /**
+         * ActivityRange
+         * @enum {string}
+         */
+        ActivityRange: "24h" | "7d" | "30d";
         /** AttemptOut */
         AttemptOut: {
             /** Id */
@@ -305,6 +348,17 @@ export interface components {
             response_body: string | null;
             /** Error */
             error: string | null;
+        };
+        /**
+         * DeliveryActivity
+         * @description Every bucket of the range is present, oldest first; the last one contains now.
+         */
+        DeliveryActivity: {
+            range: components["schemas"]["ActivityRange"];
+            /** Bucket Seconds */
+            bucket_seconds: number;
+            /** Buckets */
+            buckets: components["schemas"]["ActivityBucket"][];
         };
         /** DeliveryDetail */
         DeliveryDetail: {
@@ -805,6 +859,7 @@ export interface operations {
                 status?: components["schemas"]["DeliveryStatus"] | null;
                 endpoint_id?: string | null;
                 event_id?: string | null;
+                event_type?: string | null;
                 limit?: number;
             };
             header?: never;
@@ -851,6 +906,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delivery_activity_api_deliveries_activity_get: {
+        parameters: {
+            query?: {
+                range?: components["schemas"]["ActivityRange"];
+                endpoint_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryActivity"];
                 };
             };
             /** @description Validation Error */

@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,8 +7,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.clock import utcnow
 from app.config import Settings
 from app.errors import ApiError, not_found
-from app.models import Delivery, DeliveryAttempt, DeliveryStatus
-from app.schemas import AttemptOut, DeliveryDetail, DeliveryStats, DeliverySummary
+from app.models import Delivery, DeliveryAttempt, DeliveryStatus, Event
+from app.schemas import (
+    ActivityBucket,
+    ActivityRange,
+    AttemptOut,
+    DeliveryActivity,
+    DeliveryDetail,
+    DeliveryStats,
+    DeliverySummary,
+)
+
+HOUR = 3600
+# range -> (bucket size in seconds, number of buckets)
+ACTIVITY_BUCKETS: dict[ActivityRange, tuple[int, int]] = {
+    ActivityRange.last_24h: (HOUR, 24),
+    ActivityRange.last_7d: (6 * HOUR, 28),
+    ActivityRange.last_30d: (24 * HOUR, 30),
+}
 
 
 def summarize(delivery: Delivery, settings: Settings) -> DeliverySummary:
@@ -35,6 +52,7 @@ async def list_deliveries(
     status: DeliveryStatus | None = None,
     endpoint_id: str | None = None,
     event_id: str | None = None,
+    event_type: str | None = None,
     limit: int = 100,
 ) -> Sequence[Delivery]:
     stmt = select(Delivery).order_by(Delivery.created_at.desc(), Delivery.id.desc()).limit(limit)
@@ -44,6 +62,8 @@ async def list_deliveries(
         stmt = stmt.where(Delivery.endpoint_id == endpoint_id)
     if event_id:
         stmt = stmt.where(Delivery.event_id == event_id)
+    if event_type:
+        stmt = stmt.where(Delivery.event.has(Event.event_type == event_type))
     return (await session.scalars(stmt)).all()
 
 
@@ -53,6 +73,39 @@ async def stats(session: AsyncSession, endpoint_id: str | None = None) -> Delive
         stmt = stmt.where(Delivery.endpoint_id == endpoint_id)
     counts = {status: n for status, n in (await session.execute(stmt)).all()}
     return DeliveryStats(**counts, total=sum(counts.values()))
+
+
+async def activity(
+    session: AsyncSession, range_: ActivityRange, endpoint_id: str | None = None
+) -> DeliveryActivity:
+    """Delivery counts over time, bucketed in Python: SQLite has no date_trunc.
+
+    Buckets sit on multiples of their size since the epoch, which are UTC hour, 6-hour and
+    day boundaries, so a bucket's start doesn't drift with the moment of the request.
+    """
+    size, count = ACTIVITY_BUCKETS[range_]
+    epoch = int(utcnow().timestamp())
+    first = datetime.fromtimestamp(epoch - epoch % size - (count - 1) * size, UTC)
+    end = first + timedelta(seconds=size * count)
+
+    stmt = select(Delivery.created_at, Delivery.status).where(
+        Delivery.created_at >= first, Delivery.created_at < end
+    )
+    if endpoint_id:
+        stmt = stmt.where(Delivery.endpoint_id == endpoint_id)
+
+    buckets = [
+        ActivityBucket(start=first + timedelta(seconds=i * size), total=0, succeeded=0, failed=0)
+        for i in range(count)
+    ]
+    for created_at, status in await session.execute(stmt):
+        bucket = buckets[int((created_at - first).total_seconds()) // size]
+        bucket.total += 1
+        if status == DeliveryStatus.succeeded:
+            bucket.succeeded += 1
+        elif status == DeliveryStatus.failed:
+            bucket.failed += 1
+    return DeliveryActivity(range=range_, bucket_seconds=size, buckets=buckets)
 
 
 async def summaries(
