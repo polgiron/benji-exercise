@@ -131,19 +131,20 @@ off-the-shelf verifiers:
 
 ## 7. API surface
 
-| method     | path                                             | purpose                                                   |
-| ---------- | ------------------------------------------------ | --------------------------------------------------------- |
-| GET        | `/api/event-types`                               | catalogue: description, JSON Schema, sample payload       |
-| GET / POST | `/api/endpoints`                                 | list / create (create returns the secret once)            |
-| GET, PATCH | `/api/endpoints/{id}`                            | read / enable, disable, change URL or event types         |
-| POST       | `/api/events`                                    | fire event (`Idempotency-Key` header)                     |
-| GET        | `/api/events`                                    | incoming event history, newest first                      |
-| GET        | `/api/deliveries?status=&endpoint_id=&event_id=` | list, newest first                                        |
-| GET        | `/api/deliveries/stats?endpoint_id=`             | counts by status (over every delivery, not a listed page) |
-| GET        | `/api/deliveries/{id}`                           | detail: payload + attempts                                |
-| POST       | `/api/deliveries/{id}/replay`                    | failed → pending (`409` otherwise, or if endpoint paused) |
-| GET        | `/api/stream`                                    | SSE                                                       |
-| POST       | `/mock/{ok,fail,flaky,slow,reject}`              | dev receivers for demoing every path                      |
+| method     | path                                                         | purpose                                                   |
+| ---------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| GET        | `/api/event-types`                                           | catalogue: description, JSON Schema, sample payload       |
+| GET / POST | `/api/endpoints`                                             | list / create (create returns the secret once)            |
+| GET, PATCH | `/api/endpoints/{id}`                                        | read / enable, disable, change URL or event types         |
+| POST       | `/api/events`                                                | fire event (`Idempotency-Key` header)                     |
+| GET        | `/api/events`                                                | incoming event history, newest first                      |
+| GET        | `/api/deliveries?status=&endpoint_id=&event_id=&event_type=` | list, newest first                                        |
+| GET        | `/api/deliveries/stats?endpoint_id=`                         | counts by status (over every delivery, not a listed page) |
+| GET        | `/api/deliveries/activity?range=&endpoint_id=`               | deliveries per time bucket, zero-filled (overview chart)  |
+| GET        | `/api/deliveries/{id}`                                       | detail: payload + attempts                                |
+| POST       | `/api/deliveries/{id}/replay`                                | failed → pending (`409` otherwise, or if endpoint paused) |
+| GET        | `/api/stream`                                                | SSE                                                       |
+| POST       | `/mock/{ok,fail,flaky,slow,reject}`                          | dev receivers for demoing every path                      |
 
 The README keeps the same table with the mock receivers' parameters; the full contract is the
 OpenAPI schema at `/docs`.
@@ -159,27 +160,30 @@ Nuxt with `ssr: false`, Tailwind, components from `@repo/ui` (shadcn-vue). Layer
   `openapi-typescript`: one contract, `pnpm gen:api`).
 - `app/composables/` — Vue Query hooks (`useDeliveries`, `useReplayDelivery`, …) and
   `useDeliveryStream` (SSE → cache). Query keys centralised in one factory.
-- `app/components/`, `app/pages/` — render only. Client-only UI state (expanded row, status
-  and endpoint filters) lives in components or the URL query. No Pinia.
+- `app/components/`, `app/pages/` — render only. Client-only UI state (expanded row, the
+  filters, whether the test panel is open) lives in components or the URL query. No Pinia.
 
 Screens (build order and detail: [DASHBOARD_PLAN.md](DASHBOARD_PLAN.md)):
 
-- **Overview** (home): delivery counts by status and the latest deliveries, live; endpoints
-  with their event-type chips.
+- **Overview** (home): a getting-started guide until the first delivery, a deliveries-over-time
+  chart (`/api/deliveries/activity`), KPIs (endpoints, deliveries, success rate, failed), a
+  breakdown, the latest deliveries live, and the endpoints with their event-type chips.
 - **Deliveries**: live table — event type, endpoint, status badge, attempts (`2/5`, plus a
-  replay count), next retry countdown, updated time; status and endpoint filters in the URL;
+  replay count), next retry countdown, updated time; status, event type and endpoint filters
+  in the URL;
   expandable row with payload JSON and attempt log (status code, duration, error, response
   excerpt); Replay on failed rows, disabled while the endpoint is paused.
 - **Endpoints**: list with event-type chips and an enable/disable switch; create dialog
   (URL + event types) that reveals the secret once with a copy button and a "you won't see this
   again" warning. An endpoint page adds a switch per event type, its stats and its deliveries.
-- **Test panel** (right-hand card on every page, not part of the customer's UI): type select,
+- **Test panel** (right-hand card on every page, toggled from the header; not part of the
+  customer's UI): type select,
   JSON payload editor prefilled from the sample, idempotency key (auto-generated, with
   "re-submit same key"); result banner: "created, N deliveries" vs "deduplicated — already
   received as evt_…"; the mock receiver URLs; the live / reconnecting indicator.
 - Async UX: skeletons for loading, empty states with a next action (filter-aware on the
   deliveries table), buttons disabled and spinning while their mutation is in flight. A failed
-  mutation is a toast; a failed load shows its message in place with a Retry button, and clears
+  mutation is a toast; a failed load shows its message in place with a "Try again" button, and clears
   on its own when the stream reconnects. All of it from the single error shape.
 
 ## 9. Testing

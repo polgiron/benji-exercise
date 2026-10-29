@@ -361,6 +361,22 @@
             }
           },
           {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -434,6 +450,65 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DeliveryStats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deliveries/activity": {
+      "get": {
+        "tags": [
+          "deliveries"
+        ],
+        "summary": "Delivery Activity",
+        "description": "Deliveries created per time bucket, oldest first, zero-filled. Declared before\n`/{delivery_id}`, which would otherwise take \"activity\" as an id.",
+        "operationId": "delivery_activity_api_deliveries_activity_get",
+        "parameters": [
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ActivityRange",
+              "default": "7d"
+            }
+          },
+          {
+            "name": "endpoint_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Endpoint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryActivity"
                 }
               }
             }
@@ -720,6 +795,45 @@
   },
   "components": {
     "schemas": {
+      "ActivityBucket": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "succeeded": {
+            "type": "integer",
+            "title": "Succeeded"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "start",
+          "total",
+          "succeeded",
+          "failed"
+        ],
+        "title": "ActivityBucket",
+        "description": "Deliveries created in [start, start + bucket_seconds), split by their current status."
+      },
+      "ActivityRange": {
+        "type": "string",
+        "enum": [
+          "24h",
+          "7d",
+          "30d"
+        ],
+        "title": "ActivityRange"
+      },
       "AttemptOut": {
         "properties": {
           "id": {
@@ -789,6 +903,32 @@
           "error"
         ],
         "title": "AttemptOut"
+      },
+      "DeliveryActivity": {
+        "properties": {
+          "range": {
+            "$ref": "#/components/schemas/ActivityRange"
+          },
+          "bucket_seconds": {
+            "type": "integer",
+            "title": "Bucket Seconds"
+          },
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityBucket"
+            },
+            "type": "array",
+            "title": "Buckets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "range",
+          "bucket_seconds",
+          "buckets"
+        ],
+        "title": "DeliveryActivity",
+        "description": "Every bucket of the range is present, oldest first; the last one contains now."
       },
       "DeliveryDetail": {
         "properties": {

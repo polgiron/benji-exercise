@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
@@ -111,3 +112,26 @@ class DeliveryStats(BaseModel):
     succeeded: int = 0
     failed: int = 0
     total: int = 0
+
+
+class ActivityRange(StrEnum):
+    last_24h = "24h"
+    last_7d = "7d"
+    last_30d = "30d"
+
+
+class ActivityBucket(BaseModel):
+    """Deliveries created in [start, start + bucket_seconds), split by their current status."""
+
+    start: datetime
+    total: int
+    succeeded: int
+    failed: int
+
+
+class DeliveryActivity(BaseModel):
+    """Every bucket of the range is present, oldest first; the last one contains now."""
+
+    range: ActivityRange
+    bucket_seconds: int
+    buckets: list[ActivityBucket]

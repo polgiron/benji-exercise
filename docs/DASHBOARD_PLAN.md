@@ -56,7 +56,7 @@ make it collapsible if the deliveries table runs out of width.)
 - `endpoint_disabled` as `last_error` reads as "endpoint was disabled". Replay is disabled, with
   a tooltip, while the endpoint is paused (the API would refuse it) and comes back once it is
   enabled again.
-- An empty result under a filter says so, with a "clear filters" link.
+- An empty result under a filter says so, with a "Clear filters" button.
 
 **Endpoints** (`/endpoints`) and **Endpoint** (`/endpoints/[id]`)
 
@@ -88,24 +88,24 @@ make it collapsible if the deliveries table runs out of width.)
 
 ```
 app/
-  api/            typed fetch functions on apiFetch — endpoints.ts, eventTypes.ts, events.ts,
+  api/            typed fetch functions on apiFetch — endpoints.ts, event-types.ts, events.ts,
                   deliveries.ts; types from schema.d.ts only
   composables/
-    queryKeys.ts            one key factory per resource
-    useEndpoints.ts         list, detail, create, update (mutations invalidate)
-    useEventTypes.ts
-    useDeliveries.ts        list(filters), detail, stats, replay
-    useFireEvent.ts         mutation + idempotency-key state
-    useDeliveryStream.ts    EventSource → cache (see below), connection state
-    useNow.ts               one shared 1 s clock for countdowns
-  utils/deliveryCache.ts    pure merge functions (no Vue) — the unit-tested part
+    query-keys.ts            one key factory per resource
+    use-endpoints.ts         list, detail, create, update (mutations invalidate)
+    use-event-types.ts
+    use-deliveries.ts        list(filters), detail, stats, replay
+    use-fire-event.ts         mutation + idempotency-key state
+    use-delivery-stream.ts    EventSource → cache (see below), connection state
+    use-now.ts               one shared 1 s clock for countdowns
+  utils/delivery-cache.ts    pure merge functions (no Vue) — the unit-tested part
   components/
     layout/      AppHeader, TestPanel
     overview/    DeliveriesCard, EndpointsCard
     deliveries/  DeliveriesTable, DeliveryRow, AttemptLog, DeliveryStatusBadge, RetryCountdown
     endpoints/   EndpointList, CreateEndpointDialog, SecretReveal, EventTypeSwitches
     test-panel/  FireEventForm, FireEventResult, MockReceivers, ConnectionStatus
-    shared/      QueryError (a failed load + Retry, used by every view)
+    common/      LoadError (a failed load + "Try again", used by every view)
   pages/         index.vue, deliveries.vue, endpoints/index.vue, endpoints/[id].vue
 ```
 
@@ -138,26 +138,26 @@ The SSE stream is an accelerator, REST is the source of truth.
 Skeletons while loading; empty states with the next action ("No endpoints yet — create one",
 "No deliveries — fire an event from the test panel"); every mutation button disabled with a
 spinner while in flight. Errors all come from the one `ApiError` shape, branching on `code`
-only: a failed mutation is a toast; a failed load shows its message in place with a Retry button
-(`shared/QueryError`).
+only: a failed mutation is a toast; a failed load shows its message in place with a "Try again"
+button (`common/load-error.vue`).
 
 ## Build steps
 
 Starts once PR #3 (the API) is merged. Each step ends with `pnpm typecheck`, `pnpm lint`,
 `pnpm test` green, and steps 3–6 are checked in a browser against the `/mock/*` receivers.
 
-| #   | step                     | content                                                                       | checks                                                                       |
-| --- | ------------------------ | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 1   | Layout                   | header + nav, test panel shell, overview / deliveries / endpoints pages       | pages route; both themes read                                                |
-| 2   | API layer + keys         | `api/*.ts`, key factory, query/mutation composables                           | Vitest: a function per route builds the right request; error mapping         |
-| 3   | Endpoints                | list, create dialog + secret reveal, endpoint page with both switches         | browser: create → secret once → reload → secret gone; unsubscribe a type     |
-| 4   | Fire event               | form, schema, key handling, result banner, mock receivers                     | browser: fire → N deliveries; re-submit → deduplicated; bad payload → field  |
-| 5   | Deliveries + live stream | table, filters in URL, expandable row, replay, `useDeliveryStream`, countdown | Vitest on `deliveryCache.ts`; browser: flaky receiver goes live to succeeded |
-| 6   | Overview + polish        | the two cards with stats, empty / loading / error states                      | browser: stop the API → reconnecting; restart → caught up without refresh    |
+| #   | step                     | content                                                                       | checks                                                                        |
+| --- | ------------------------ | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1   | Layout                   | header + nav, test panel shell, overview / deliveries / endpoints pages       | pages route; both themes read                                                 |
+| 2   | API layer + keys         | `api/*.ts`, key factory, query/mutation composables                           | Vitest: a function per route builds the right request; error mapping          |
+| 3   | Endpoints                | list, create dialog + secret reveal, endpoint page with both switches         | browser: create → secret once → reload → secret gone; unsubscribe a type      |
+| 4   | Fire event               | form, schema, key handling, result banner, mock receivers                     | browser: fire → N deliveries; re-submit → deduplicated; bad payload → field   |
+| 5   | Deliveries + live stream | table, filters in URL, expandable row, replay, `useDeliveryStream`, countdown | Vitest on `delivery-cache.ts`; browser: flaky receiver goes live to succeeded |
+| 6   | Overview + polish        | the two cards with stats, empty / loading / error states                      | browser: stop the API → reconnecting; restart → caught up without refresh     |
 
 ## Tests
 
-- `deliveryCache.ts`: newer version applies, older or equal is dropped; patching a row present in
+- `delivery-cache.ts`: newer version applies, older or equal is dropped; patching a row present in
   two filtered lists; unknown id returns "invalidate"; detail updated alongside the list.
 - `useFireEvent`: the key is kept on re-submit and regenerated on change.
 - API layer: `toApiError` already covered; one test per error code path the UI branches on.

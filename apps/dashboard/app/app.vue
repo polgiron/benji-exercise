@@ -3,6 +3,7 @@ import { Toaster, TooltipProvider } from '@repo/ui'
 
 // Opened once for the whole app: every page reads the same live cache.
 useDeliveryStream()
+const testPanelOpen = useTestPanel()
 </script>
 
 <template>
@@ -15,7 +16,14 @@ useDeliveryStream()
             <NuxtPage />
           </div>
         </main>
-        <TestPanel class="w-96 shrink-0" />
+        <Transition
+          enter-from-class="opacity-0 translate-x-4"
+          leave-to-class="opacity-0 translate-x-4"
+          enter-active-class="transition duration-300 ease-out-quart motion-reduce:transition-none"
+          leave-active-class="transition duration-200 ease-out-quart motion-reduce:transition-none"
+        >
+          <TestPanel v-if="testPanelOpen" class="w-96 shrink-0" />
+        </Transition>
       </div>
       <Toaster rich-colors />
     </div>

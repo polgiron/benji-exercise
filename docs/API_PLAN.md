@@ -71,19 +71,20 @@ whole database. Every table that a customer would own gets a `customer_id` later
 
 ### API routes
 
-| method     | path                                | purpose                                               |
-| ---------- | ----------------------------------- | ----------------------------------------------------- |
-| GET        | `/api/event-types`                  | the catalogue, with sample payloads                   |
-| GET / POST | `/api/endpoints`                    | list / create (create returns the secret once)        |
-| GET, PATCH | `/api/endpoints/{id}`               | read / enable, disable, change URL or event types     |
-| POST       | `/api/events`                       | fire an event (`Idempotency-Key` header)              |
-| GET        | `/api/events`                       | incoming call history, newest first                   |
-| GET        | `/api/deliveries`                   | list, filter by `status` / `endpoint_id` / `event_id` |
-| GET        | `/api/deliveries/stats`             | counts by status (`endpoint_id` filter optional)      |
-| GET        | `/api/deliveries/{id}`              | detail: payload + attempt log                         |
-| POST       | `/api/deliveries/{id}/replay`       | re-queue a failed delivery                            |
-| GET        | `/api/stream`                       | SSE                                                   |
-| POST       | `/mock/{ok,fail,flaky,slow,reject}` | demo receivers (verify the signature, then answer)    |
+| method     | path                                | purpose                                                              |
+| ---------- | ----------------------------------- | -------------------------------------------------------------------- |
+| GET        | `/api/event-types`                  | the catalogue, with sample payloads                                  |
+| GET / POST | `/api/endpoints`                    | list / create (create returns the secret once)                       |
+| GET, PATCH | `/api/endpoints/{id}`               | read / enable, disable, change URL or event types                    |
+| POST       | `/api/events`                       | fire an event (`Idempotency-Key` header)                             |
+| GET        | `/api/events`                       | incoming call history, newest first                                  |
+| GET        | `/api/deliveries`                   | list, filter by `status` / `endpoint_id` / `event_id` / `event_type` |
+| GET        | `/api/deliveries/stats`             | counts by status (`endpoint_id` filter optional)                     |
+| GET        | `/api/deliveries/activity`          | deliveries per time bucket (`range`, `endpoint_id`)                  |
+| GET        | `/api/deliveries/{id}`              | detail: payload + attempt log                                        |
+| POST       | `/api/deliveries/{id}/replay`       | re-queue a failed delivery                                           |
+| GET        | `/api/stream`                       | SSE                                                                  |
+| POST       | `/mock/{ok,fail,flaky,slow,reject}` | demo receivers (verify the signature, then answer)                   |
 
 ## Module layout
 

@@ -27,7 +27,8 @@ drafted, scaffolded and implemented under review.
    receivers, concurrent re-submits, an API restart mid-retry, and the dashboard in a browser.
    It found gaps (views stuck on an error after an API outage, no Retry, a misleading empty
    state under a filter, Replay offered on paused endpoints, docs behind the code); I chose
-   the fixes, and they shipped in one PR.
+   the fixes. The Retry and empty-state ones also landed with the dashboard polish, so the
+   review PR kept those and added the rest.
 
 ## Handover brief that started the build session
 
