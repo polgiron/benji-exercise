@@ -29,14 +29,14 @@ wrap `uv run …` so `pnpm dev` / `pnpm test` drive both apps. Shared packages: 
 
 ## 2. Data model (SQLite, SQLAlchemy 2 async + aiosqlite; column detail in [API_PLAN.md](API_PLAN.md))
 
-| table               | key columns                                                                                                                                                               | notes                                         |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `event_types`       | `key` PK, `description`, `sample_payload` (JSON)                                                                                                                          | catalogue, seeded at startup                  |
-| `endpoints`         | `id`, `url`, `description`, `secret`, `enabled`, `created_at`                                                                                                             | single implicit customer (multi-tenancy cut)  |
-| `subscriptions`     | `endpoint_id`, `event_type` → event_types; **PK(endpoint_id, event_type)**                                                                                                | link rows behind an endpoint's event types    |
-| `events`            | `id`, `event_type`, `payload` (JSON), `body`, `idempotency_key` **UNIQUE**, `request_hash`, `created_at`                                                                  | dedup of re-submits                           |
-| `deliveries`        | `id`, `event_id`, `endpoint_id`, `status`, `attempt_count`, `next_attempt_at`, `lease_expires_at`, `last_error`, `version`, timestamps; **UNIQUE(event_id, endpoint_id)** | one row = one (event, endpoint) pair, forever |
-| `delivery_attempts` | `id`, `delivery_id`, `number`, `started_at`, `duration_ms`, `response_status`, `response_body` (truncated 2 KB), `error`, `trigger` (`auto` / `replay`)                   | append-only history                           |
+| table               | key columns                                                                                                                                                                                                  | notes                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- |
+| `event_types`       | `key` PK, `description`, `payload_schema` (JSON Schema), `sample_payload` (JSON)                                                                                                                             | catalogue, seeded at startup                  |
+| `endpoints`         | `id`, `url`, `description`, `secret`, `enabled`, `created_at`                                                                                                                                                | single implicit customer (multi-tenancy cut)  |
+| `subscriptions`     | `endpoint_id`, `event_type` → event_types; **PK(endpoint_id, event_type)**                                                                                                                                   | link rows behind an endpoint's event types    |
+| `events`            | `id`, `event_type`, `payload` (JSON), `body`, `idempotency_key` **UNIQUE**, `request_hash`, `created_at`                                                                                                     | dedup of re-submits                           |
+| `deliveries`        | `id`, `event_id`, `endpoint_id`, `status`, `attempt_count`, `series_attempts`, `replay_count`, `next_attempt_at`, `lease_expires_at`, `last_error`, `version`, timestamps; **UNIQUE(event_id, endpoint_id)** | one row = one (event, endpoint) pair, forever |
+| `delivery_attempts` | `id`, `delivery_id`, `number`, `started_at`, `duration_ms`, `response_status`, `response_body` (truncated 2 KB), `error`, `trigger` (`auto` / `replay`)                                                      | append-only history                           |
 
 Status machine: `pending → in_progress → succeeded | pending (retry scheduled) | failed`,
 and `failed → pending` via Replay. `version` increments on every change (used by the UI, §6).
@@ -77,11 +77,11 @@ replay for free, with zero infrastructure. Redis/Celery/SQS would add moving par
 explicitly rules out. The claim query is written so the scale-out path is a drop-in change:
 Postgres with `FOR UPDATE SKIP LOCKED` and N worker processes.
 
-- Retryable: network errors, timeouts, `408`, `429` (honouring `Retry-After`), `5xx`.
+- Retryable: network errors, timeouts, `408`, `425`, `429` (honouring `Retry-After`), `5xx`.
 - Terminal: other `4xx` — the receiver explicitly rejected the request; retrying will not
   help, but Replay can once they fix it.
-- Backoff: exponential with full jitter, `base * 2^(n-1)`, capped; max 5 attempts, then
-  `failed`. Base/cap are config: seconds in dev so the demo is watchable, minutes→hours in prod.
+- Backoff: exponential with jitter (a random factor in [0.5, 1]), `base * 2^(n-1)`, capped;
+  max 5 attempts, then `failed`; a replay starts a new series of 5. Base/cap are config: seconds in dev so the demo is watchable, minutes→hours in prod.
 - Endpoint disabled while a delivery is pending → marked `failed` ("endpoint disabled") at
   claim time; replayable after re-enabling.
 
@@ -123,24 +123,30 @@ off-the-shelf verifiers:
   - updates carry `version`; the cache only applies an update with a higher version
     (out-of-order or stale messages can't regress a row);
   - REST is the source of truth, SSE is an accelerator: on (re)connect and on tab refocus,
-    the deliveries queries are invalidated and refetched, covering anything missed while
-    disconnected (the in-memory bus has no backlog);
+    every active query is invalidated and refetched, covering anything missed while
+    disconnected (the in-memory bus has no backlog). After an API outage this is also what
+    clears the error states: the stream retries every 3 s, and its reconnect refetches them;
   - "next retry in Xs" is derived from `next_attempt_at` with a ticking clock, not pushed.
 - A connection indicator shows live / reconnecting.
 
 ## 7. API surface
 
-| method     | path                                   | purpose                                         |
-| ---------- | -------------------------------------- | ----------------------------------------------- |
-| GET        | `/api/event-types`                     | catalogue (+ sample payloads for the test form) |
-| GET / POST | `/api/endpoints`                       | list / create (create returns the secret once)  |
-| PATCH      | `/api/endpoints/{id}`                  | enable / disable                                |
-| POST       | `/api/events`                          | fire event (`Idempotency-Key` header)           |
-| GET        | `/api/deliveries?status=&endpoint_id=` | list, newest first                              |
-| GET        | `/api/deliveries/{id}`                 | detail: payload + attempts                      |
-| POST       | `/api/deliveries/{id}/replay`          | failed → pending                                |
-| GET        | `/api/stream`                          | SSE                                             |
-| POST       | `/mock/{ok,fail,flaky,slow,reject}`    | dev receivers for demoing every path            |
+| method     | path                                             | purpose                                                   |
+| ---------- | ------------------------------------------------ | --------------------------------------------------------- |
+| GET        | `/api/event-types`                               | catalogue: description, JSON Schema, sample payload       |
+| GET / POST | `/api/endpoints`                                 | list / create (create returns the secret once)            |
+| GET, PATCH | `/api/endpoints/{id}`                            | read / enable, disable, change URL or event types         |
+| POST       | `/api/events`                                    | fire event (`Idempotency-Key` header)                     |
+| GET        | `/api/events`                                    | incoming event history, newest first                      |
+| GET        | `/api/deliveries?status=&endpoint_id=&event_id=` | list, newest first                                        |
+| GET        | `/api/deliveries/stats?endpoint_id=`             | counts by status (over every delivery, not a listed page) |
+| GET        | `/api/deliveries/{id}`                           | detail: payload + attempts                                |
+| POST       | `/api/deliveries/{id}/replay`                    | failed → pending (`409` otherwise, or if endpoint paused) |
+| GET        | `/api/stream`                                    | SSE                                                       |
+| POST       | `/mock/{ok,fail,flaky,slow,reject}`              | dev receivers for demoing every path                      |
+
+The README keeps the same table with the mock receivers' parameters; the full contract is the
+OpenAPI schema at `/docs`.
 
 Errors share one shape: `{"error": {"code": "...", "message": "..."}}` (exception handlers
 also wrap validation errors), so the dashboard has one error path.
@@ -154,22 +160,27 @@ Nuxt with `ssr: false`, Tailwind, components from `@repo/ui` (shadcn-vue). Layer
 - `app/composables/` — Vue Query hooks (`useDeliveries`, `useReplayDelivery`, …) and
   `useDeliveryStream` (SSE → cache). Query keys centralised in one factory.
 - `app/components/`, `app/pages/` — render only. Client-only UI state (expanded row, status
-  filter) lives in components or the URL query. No Pinia.
+  and endpoint filters) lives in components or the URL query. No Pinia.
 
-Screens:
+Screens (build order and detail: [DASHBOARD_PLAN.md](DASHBOARD_PLAN.md)):
 
-- **Deliveries** (home): live table — event type, endpoint, status badge, attempts
-  (`2/5`), next retry countdown, updated time; status filter in the URL; expandable row with
-  payload JSON and attempt log (status code, duration, error, response excerpt); Replay on
-  failed rows.
+- **Overview** (home): delivery counts by status and the latest deliveries, live; endpoints
+  with their event-type chips.
+- **Deliveries**: live table — event type, endpoint, status badge, attempts (`2/5`, plus a
+  replay count), next retry countdown, updated time; status and endpoint filters in the URL;
+  expandable row with payload JSON and attempt log (status code, duration, error, response
+  excerpt); Replay on failed rows, disabled while the endpoint is paused.
 - **Endpoints**: list with event-type chips and an enable/disable switch; create dialog
-  (URL + event types multi-select, mock-receiver presets) that reveals the secret once with a
-  copy button and a "you won't see this again" warning.
-- **Fire test event** (sheet available everywhere): type select, JSON payload editor
-  prefilled from the sample, idempotency key (auto-generated, with "re-submit same key");
-  result banner: "created, N deliveries" vs "deduplicated — already received as evt_…".
-- Async UX: skeletons for loading, empty states with a next action, buttons disabled and
-  spinning while their mutation is in flight, toasts for errors from the single error shape.
+  (URL + event types) that reveals the secret once with a copy button and a "you won't see this
+  again" warning. An endpoint page adds a switch per event type, its stats and its deliveries.
+- **Test panel** (right-hand card on every page, not part of the customer's UI): type select,
+  JSON payload editor prefilled from the sample, idempotency key (auto-generated, with
+  "re-submit same key"); result banner: "created, N deliveries" vs "deduplicated — already
+  received as evt_…"; the mock receiver URLs; the live / reconnecting indicator.
+- Async UX: skeletons for loading, empty states with a next action (filter-aware on the
+  deliveries table), buttons disabled and spinning while their mutation is in flight. A failed
+  mutation is a toast; a failed load shows its message in place with a Retry button, and clears
+  on its own when the stream reconnects. All of it from the single error shape.
 
 ## 9. Testing
 
@@ -188,8 +199,9 @@ deterministic and never sleep.
 - **Replay**: failed → replay → delivered; attempt history preserved and numbering continues.
 - **Fan-out**: only enabled, subscribed endpoints get deliveries.
 
-Frontend (Vitest): the SSE cache-merge logic (version ordering, list + detail updates) and
-the error normalisation in the API layer — the parts with real logic.
+Frontend (Vitest): the SSE cache-merge logic (version ordering, list + detail updates), the
+error normalisation and the request each API function builds, and the idempotency-key handling
+of the fire-event form — the parts with real logic.
 
 ## 10. Scope cuts (deliberate) and next steps
 

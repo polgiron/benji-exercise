@@ -53,7 +53,10 @@ make it collapsible if the deliveries table runs out of width.)
 - A row expands (Collapsible) into the payload JSON and the attempt log: number, trigger
   (auto / replay), status code, duration, error, response excerpt.
 - Replay on failed rows. `not_replayable` (409) shows as a toast; the row corrects itself from SSE.
-- `endpoint_disabled` as `last_error` reads as "endpoint was disabled", with Replay still offered.
+- `endpoint_disabled` as `last_error` reads as "endpoint was disabled". Replay is disabled, with
+  a tooltip, while the endpoint is paused (the API would refuse it) and comes back once it is
+  enabled again.
+- An empty result under a filter says so, with a "clear filters" link.
 
 **Endpoints** (`/endpoints`) and **Endpoint** (`/endpoints/[id]`)
 
@@ -101,7 +104,8 @@ app/
     overview/    DeliveriesCard, EndpointsCard
     deliveries/  DeliveriesTable, DeliveryRow, AttemptLog, DeliveryStatusBadge, RetryCountdown
     endpoints/   EndpointList, CreateEndpointDialog, SecretReveal, EventTypeSwitches
-    test-panel/  FireEventForm, FireEventResult, MockReceivers
+    test-panel/  FireEventForm, FireEventResult, MockReceivers, ConnectionStatus
+    shared/      QueryError (a failed load + Retry, used by every view)
   pages/         index.vue, deliveries.vue, endpoints/index.vue, endpoints/[id].vue
 ```
 
@@ -112,8 +116,10 @@ state is the open row, the filters (URL) and the test panel's form.
 
 The SSE stream is an accelerator, REST is the source of truth.
 
-- On `ready` (first connect and every reconnect) and on tab refocus: invalidate deliveries and
-  stats, so anything missed while disconnected is refetched. The bus has no backlog.
+- On `ready` (first connect and every reconnect) and on tab refocus: invalidate every active
+  query, so anything missed while disconnected is refetched. The bus has no backlog. While the
+  API is down the stream retries every 3 s, so its reconnect is also what clears the views
+  stuck on "could not reach the API" — no separate polling.
 - On `delivery.updated`:
   - patch the row in every cached deliveries list that holds it, and the detail if cached,
     **only if the incoming `version` is newer**;
@@ -131,7 +137,9 @@ The SSE stream is an accelerator, REST is the source of truth.
 
 Skeletons while loading; empty states with the next action ("No endpoints yet — create one",
 "No deliveries — fire an event from the test panel"); every mutation button disabled with a
-spinner while in flight; errors from the one `ApiError` shape as toasts, branching on `code` only.
+spinner while in flight. Errors all come from the one `ApiError` shape, branching on `code`
+only: a failed mutation is a toast; a failed load shows its message in place with a Retry button
+(`shared/QueryError`).
 
 ## Build steps
 

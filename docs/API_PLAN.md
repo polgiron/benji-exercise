@@ -37,7 +37,9 @@ whole database. Every table that a customer would own gets a `customer_id` later
    says `deduplicated: true` and points at the original event.
 5. **`deliveries`** — one row per (event, endpoint) pair, created by fan-out in the same
    transaction as the event: the outbox. `id` (`dlv_…`), `event_id`, `endpoint_id`, `status`
-   (`pending` / `in_progress` / `succeeded` / `failed`), `attempt_count`, `next_attempt_at`,
+   (`pending` / `in_progress` / `succeeded` / `failed`), `attempt_count` (all attempts, across
+   replays), `series_attempts` (attempts since the last replay, what `max_attempts` caps),
+   `replay_count`, `next_attempt_at`,
    `lease_expires_at`, `last_error`, `version` (bumped on every change, used by the live view),
    `created_at`, `updated_at`. **UNIQUE(event_id, endpoint_id)** is what makes "never delivered
    twice to the same endpoint" a database guarantee.
@@ -54,11 +56,12 @@ whole database. Every table that a customer would own gets a `customer_id` later
 8. **Delivery worker** — an asyncio task started with the app. It claims due deliveries
    atomically (`pending` → `in_progress` with a 30 s lease), POSTs them with a 10 s timeout,
    then records the attempt and the new status in one transaction.
-9. **Retry policy** — 2xx = success; network errors, timeouts, 408, 429 (honouring
-   `Retry-After`) and 5xx are retried with exponential backoff + full jitter; other 4xx are
+9. **Retry policy** — 2xx = success; network errors, timeouts, 408, 425, 429 (honouring
+   `Retry-After`) and 5xx are retried with exponential backoff + jitter (×0.5–1); other 4xx are
    terminal. After 5 attempts → `failed`. Delays are seconds in dev so the demo is watchable.
-10. **Replay** — `failed` → `pending` on the same delivery row, same event id; new attempts are
-    appended with `trigger = replay`. Replaying anything else is a 409.
+10. **Replay** — `failed` → `pending` on the same delivery row, same event id, a new series of
+    5 attempts; they are appended with `trigger = replay`. Replaying anything else is a 409
+    (`not_replayable`), and so is replaying into a paused endpoint (`endpoint_disabled`).
 11. **Live stream** — `GET /api/stream` (SSE) pushes the delivery summary after every status
     change; the dashboard writes it into its query cache and refetches on reconnect.
 12. **Mock receivers** — `/mock/ok`, `/fail`, `/flaky?fail=N`, `/slow`, `/reject`, which verify
@@ -68,17 +71,19 @@ whole database. Every table that a customer would own gets a `customer_id` later
 
 ### API routes
 
-| method     | path                          | purpose                                               |
-| ---------- | ----------------------------- | ----------------------------------------------------- |
-| GET        | `/api/event-types`            | the catalogue, with sample payloads                   |
-| GET / POST | `/api/endpoints`              | list / create (create returns the secret once)        |
-| PATCH      | `/api/endpoints/{id}`         | enable / disable, change subscribed event types       |
-| POST       | `/api/events`                 | fire an event (`Idempotency-Key` header)              |
-| GET        | `/api/events`                 | incoming call history, newest first                   |
-| GET        | `/api/deliveries`             | list, filter by `status` / `endpoint_id` / `event_id` |
-| GET        | `/api/deliveries/{id}`        | detail: payload + attempt log                         |
-| POST       | `/api/deliveries/{id}/replay` | re-queue a failed delivery                            |
-| GET        | `/api/stream`                 | SSE                                                   |
+| method     | path                                | purpose                                               |
+| ---------- | ----------------------------------- | ----------------------------------------------------- |
+| GET        | `/api/event-types`                  | the catalogue, with sample payloads                   |
+| GET / POST | `/api/endpoints`                    | list / create (create returns the secret once)        |
+| GET, PATCH | `/api/endpoints/{id}`               | read / enable, disable, change URL or event types     |
+| POST       | `/api/events`                       | fire an event (`Idempotency-Key` header)              |
+| GET        | `/api/events`                       | incoming call history, newest first                   |
+| GET        | `/api/deliveries`                   | list, filter by `status` / `endpoint_id` / `event_id` |
+| GET        | `/api/deliveries/stats`             | counts by status (`endpoint_id` filter optional)      |
+| GET        | `/api/deliveries/{id}`              | detail: payload + attempt log                         |
+| POST       | `/api/deliveries/{id}/replay`       | re-queue a failed delivery                            |
+| GET        | `/api/stream`                       | SSE                                                   |
+| POST       | `/mock/{ok,fail,flaky,slow,reject}` | demo receivers (verify the signature, then answer)    |
 
 ## Module layout
 
