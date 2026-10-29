@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
   Label,
+  PageHeader,
   Skeleton,
   Switch,
 } from '@repo/ui'
@@ -31,16 +32,16 @@ const update = useUpdateEndpoint()
       {{ endpoint.error.value?.message }}
     </p>
     <template v-else-if="endpoint.data.value">
-      <div class="flex items-start gap-4">
-        <div class="min-w-0 flex-1">
-          <h1 class="truncate font-mono text-lg font-semibold">{{ endpoint.data.value.url }}</h1>
-          <p class="text-sm text-muted-foreground">
-            {{ endpoint.data.value.description || 'No description' }} ·
-            <span class="font-mono">{{ endpoint.data.value.id }}</span>
-          </p>
-        </div>
+      <PageHeader>
+        <template #title>
+          <span class="font-mono">{{ endpoint.data.value.url }}</span>
+        </template>
+        <template #description>
+          {{ endpoint.data.value.description || 'No description' }} ·
+          <span class="font-mono">{{ endpoint.data.value.id }}</span>
+        </template>
         <div class="flex items-center gap-2">
-          <Label for="endpoint-enabled" class="text-sm">
+          <Label for="endpoint-enabled">
             {{ endpoint.data.value.enabled ? 'Enabled' : 'Paused' }}
           </Label>
           <Switch
@@ -50,7 +51,7 @@ const update = useUpdateEndpoint()
             @update:model-value="(enabled) => update.mutate({ id, enabled })"
           />
         </div>
-      </div>
+      </PageHeader>
 
       <div class="grid gap-4 xl:grid-cols-2">
         <Card>

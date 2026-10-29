@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Webhook } from '@lucide/vue'
-import { cn } from '@repo/ui'
+import { IconTile, cn } from '@repo/ui'
 
 const route = useRoute()
 
@@ -18,9 +18,7 @@ const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path.s
   <header class="border-b bg-card">
     <nav class="flex h-topbar items-center gap-6 px-6">
       <NuxtLink to="/" class="flex items-center gap-2 font-semibold">
-        <span class="grid size-7 place-items-center rounded-md bg-accent text-accent-foreground">
-          <Webhook class="size-4" />
-        </span>
+        <IconTile><Webhook /></IconTile>
         Benji Webhooks
       </NuxtLink>
       <NuxtLink

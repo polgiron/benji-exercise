@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui'
+import { PageHeader, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui'
 import { EDeliveryStatus, type IDeliveryFilters } from '~/api/types'
 import { DELIVERY_STATUS_LABELS, isDeliveryStatus } from '~/utils/deliveryStatus'
 
@@ -24,8 +24,7 @@ function setFilter(name: 'status' | 'endpoint_id', value: unknown) {
 
 <template>
   <section class="space-y-4">
-    <div class="flex flex-wrap items-end gap-3">
-      <h1 class="mr-auto text-2xl font-semibold">Deliveries</h1>
+    <PageHeader title="Deliveries">
       <Select
         :model-value="filters.status ?? ALL"
         @update:model-value="(value) => setFilter('status', value)"
@@ -58,7 +57,7 @@ function setFilter(name: 'status' | 'endpoint_id', value: unknown) {
           </SelectItem>
         </SelectContent>
       </Select>
-    </div>
+    </PageHeader>
     <DeliveriesTable :filters="filters" />
   </section>
 </template>

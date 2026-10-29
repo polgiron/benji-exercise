@@ -2,6 +2,7 @@
 import { LoaderCircle, RefreshCw, Repeat, Send } from '@lucide/vue'
 import {
   Button,
+  CodeBlock,
   Input,
   Label,
   Select,
@@ -68,20 +69,13 @@ const isResubmit = computed(
     <div class="space-y-1.5">
       <div class="flex items-center justify-between">
         <Label for="fire-payload">Payload</Label>
-        <Button
-          v-if="selected"
-          variant="link"
-          size="xs"
-          class="h-auto px-0"
-          @click="showSchema = !showSchema"
-        >
+        <Button v-if="selected" variant="link" size="inline" @click="showSchema = !showSchema">
           {{ showSchema ? 'Hide schema' : 'Show schema' }}
         </Button>
       </div>
-      <pre
-        v-if="showSchema && selected"
-        class="max-h-48 overflow-auto rounded-md bg-muted p-2 font-mono text-2xs"
-        >{{ JSON.stringify(selected.payload_schema, null, 2) }}</pre>
+      <CodeBlock v-if="showSchema && selected" surface="muted" size="sm" height="sm">{{
+        JSON.stringify(selected.payload_schema, null, 2)
+      }}</CodeBlock>
       <Textarea
         id="fire-payload"
         v-model="form.payloadText.value"

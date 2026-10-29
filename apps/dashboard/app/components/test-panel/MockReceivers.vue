@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Check, Copy } from '@lucide/vue'
-import { Button } from '@repo/ui'
+import { Button, Card } from '@repo/ui'
 import { useClipboard } from '@vueuse/core'
 import { mockReceiverUrl } from '~/api/mock'
 
@@ -24,29 +24,31 @@ const { copy, copied, text } = useClipboard({ copiedDuring: 1500 })
         endpoint.
       </p>
     </div>
-    <ul class="divide-y rounded-md border">
-      <li
-        v-for="receiver in RECEIVERS"
-        :key="receiver.path"
-        class="flex items-start gap-2 px-3 py-2"
-      >
-        <div class="min-w-0 flex-1">
-          <p class="truncate font-mono text-2xs">/mock/{{ receiver.path }}</p>
-          <p class="text-xs text-muted-foreground">
-            <span class="font-medium text-foreground">{{ receiver.answer }}</span> ·
-            {{ receiver.does }}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          :aria-label="`Copy /mock/${receiver.path}`"
-          @click="copy(mockReceiverUrl(receiver.path))"
+    <Card class="gap-0 py-0">
+      <ul class="divide-y">
+        <li
+          v-for="receiver in RECEIVERS"
+          :key="receiver.path"
+          class="flex items-start gap-2 px-3 py-2"
         >
-          <Check v-if="copied && text === mockReceiverUrl(receiver.path)" />
-          <Copy v-else />
-        </Button>
-      </li>
-    </ul>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-mono text-2xs">/mock/{{ receiver.path }}</p>
+            <p class="text-xs text-muted-foreground">
+              <span class="font-medium text-foreground">{{ receiver.answer }}</span> ·
+              {{ receiver.does }}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            :aria-label="`Copy /mock/${receiver.path}`"
+            @click="copy(mockReceiverUrl(receiver.path))"
+          >
+            <Check v-if="copied && text === mockReceiverUrl(receiver.path)" />
+            <Copy v-else />
+          </Button>
+        </li>
+      </ul>
+    </Card>
   </section>
 </template>

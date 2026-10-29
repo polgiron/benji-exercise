@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Card,
   Skeleton,
   Table,
   TableBody,
@@ -27,7 +28,7 @@ function toggle(id: string) {
 </script>
 
 <template>
-  <div class="rounded-card border bg-card shadow-card">
+  <Card class="gap-0 overflow-hidden py-0">
     <Table>
       <TableHeader>
         <TableRow>
@@ -65,5 +66,5 @@ function toggle(id: string) {
         />
       </TableBody>
     </Table>
-  </div>
+  </Card>
 </template>

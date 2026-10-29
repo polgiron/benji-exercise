@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ArrowRight } from '@lucide/vue'
 import { Button, Card, CardAction, CardContent, CardHeader, CardTitle, Skeleton } from '@repo/ui'
-import { formatRelative } from '@repo/utils'
+import { formatAgo } from '@repo/utils'
 
 const latest = useDeliveries({ limit: 5 })
 const now = useNow()
@@ -41,7 +41,7 @@ const now = useNow()
               </p>
             </div>
             <span class="text-xs text-muted-foreground">
-              {{ formatRelative(delivery.updated_at, now) }}
+              {{ formatAgo(delivery.updated_at, now) }}
             </span>
             <DeliveryStatusBadge :status="delivery.status" />
           </li>

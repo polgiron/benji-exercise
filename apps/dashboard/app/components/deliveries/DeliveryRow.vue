@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChevronRight, LoaderCircle, RotateCcw } from '@lucide/vue'
 import { Button, TableCell, TableRow, cn } from '@repo/ui'
-import { formatRelative } from '@repo/utils'
+import { formatAgo } from '@repo/utils'
 import { EDeliveryStatus, type IDeliverySummary } from '~/api/types'
 import { describeLastError } from '~/utils/deliveryStatus'
 
@@ -21,7 +21,8 @@ const columns = computed(() => (props.showEndpoint ? 7 : 6))
 
 <template>
   <TableRow
-    :class="cn('cursor-pointer', { 'bg-muted/50': expanded })"
+    class="cursor-pointer"
+    :data-state="expanded ? 'selected' : undefined"
     :aria-expanded="expanded"
     @click="$emit('toggle')"
   >
@@ -60,7 +61,7 @@ const columns = computed(() => (props.showEndpoint ? 7 : 6))
       <RetryCountdown :status="delivery.status" :next-attempt-at="delivery.next_attempt_at" />
     </TableCell>
     <TableCell class="text-muted-foreground" :title="delivery.updated_at">
-      {{ formatRelative(delivery.updated_at, now) }}
+      {{ formatAgo(delivery.updated_at, now) }}
     </TableCell>
     <TableCell class="text-right">
       <Button

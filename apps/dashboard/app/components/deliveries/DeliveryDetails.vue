@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Skeleton } from '@repo/ui'
+import { CodeBlock, Skeleton } from '@repo/ui'
 import type { IDeliverySummary } from '~/api/types'
 
 interface Props {
@@ -17,10 +17,9 @@ const detail = useDelivery(() => props.delivery.id)
         Payload · <span class="font-mono">{{ delivery.event_id }}</span>
       </h4>
       <Skeleton v-if="detail.isPending.value" class="h-32" />
-      <pre
-        v-else-if="detail.data.value"
-        class="max-h-72 overflow-auto rounded-md border bg-card p-3 font-mono text-2xs"
-        >{{ JSON.stringify(detail.data.value.payload, null, 2) }}</pre>
+      <CodeBlock v-else-if="detail.data.value" size="sm" height="md">{{
+        JSON.stringify(detail.data.value.payload, null, 2)
+      }}</CodeBlock>
     </div>
     <div class="min-w-0 space-y-1.5">
       <h4 class="text-xs font-medium text-muted-foreground">

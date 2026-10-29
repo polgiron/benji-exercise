@@ -1,5 +1,9 @@
+<script setup lang="ts">
+import { Card } from '@repo/ui'
+</script>
+
 <template>
-  <aside class="flex min-h-0 flex-col rounded-card border bg-card shadow-card">
+  <Card class="min-h-0 gap-0 py-0">
     <div class="border-b px-5 py-4">
       <h2 class="font-semibold">Test panel</h2>
       <p class="text-xs text-muted-foreground">
@@ -14,5 +18,5 @@
     <div class="border-t px-5 py-3">
       <ConnectionStatus />
     </div>
-  </aside>
+  </Card>
 </template>

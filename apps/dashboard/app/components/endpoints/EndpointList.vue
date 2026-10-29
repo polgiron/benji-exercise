@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import {
+  Button,
+  Card,
   Skeleton,
   Switch,
   Table,
@@ -21,7 +23,7 @@ const isUpdating = (id: string) => update.isPending.value && update.variables.va
 </script>
 
 <template>
-  <div class="rounded-card border bg-card shadow-card">
+  <Card class="gap-0 overflow-hidden py-0">
     <Table>
       <TableHeader>
         <TableRow>
@@ -42,12 +44,7 @@ const isUpdating = (id: string) => update.isPending.value && update.variables.va
         <TableEmpty v-else-if="endpoints.data.value?.length === 0" :colspan="3">
           <span class="text-muted-foreground">
             No endpoints yet —
-            <button
-              class="text-primary underline-offset-4 hover:underline"
-              @click="$emit('create')"
-            >
-              create one
-            </button>
+            <Button variant="link" size="inline" @click="$emit('create')">create one</Button>
           </span>
         </TableEmpty>
         <TableRow
@@ -81,5 +78,5 @@ const isUpdating = (id: string) => update.isPending.value && update.variables.va
         </TableRow>
       </TableBody>
     </Table>
-  </div>
+  </Card>
 </template>
