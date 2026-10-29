@@ -69,26 +69,33 @@ are deterministic and never sleep.
 Full design: [docs/PLAN.md](docs/PLAN.md) and [docs/API_PLAN.md](docs/API_PLAN.md). Interactive
 docs at http://localhost:8000/docs.
 
-| method     | path                          | purpose                                                           |
-| ---------- | ----------------------------- | ----------------------------------------------------------------- |
-| GET        | `/api/event-types`            | catalogue: description, JSON Schema, sample payload               |
-| GET / POST | `/api/endpoints`              | list / create (the signing secret is returned only here)          |
-| GET, PATCH | `/api/endpoints/{id}`         | read / enable, disable, change URL or event types                 |
-| POST       | `/api/events`                 | publish an event (`Idempotency-Key` header), fans out             |
-| GET        | `/api/events`                 | incoming event history                                            |
-| GET        | `/api/deliveries`             | list, filter by `status`, `endpoint_id`, `event_id`, `event_type` |
-| GET        | `/api/deliveries/stats`       | counts by status (`endpoint_id` filter optional)                  |
-| GET        | `/api/deliveries/activity`    | deliveries per time bucket (`range`, `endpoint_id`)               |
-| GET        | `/api/deliveries/{id}`        | detail: payload + attempt log                                     |
-| POST       | `/api/deliveries/{id}/replay` | re-queue a failed delivery                                        |
-| GET        | `/api/stream`                 | SSE: `delivery.updated` after every delivery state change         |
-| POST       | `/mock/{ok,fail,reject}`      | demo receivers (verify the signature, then answer)                |
-| POST       | `/mock/flaky?fail=N`          | fails the first N requests per message, then 200                  |
-| POST       | `/mock/slow?seconds=S`        | answers after S seconds (default 15, past the 10 s timeout)       |
+| method     | path                          | purpose                                                             |
+| ---------- | ----------------------------- | ------------------------------------------------------------------- |
+| GET        | `/api/event-types`            | catalogue: description, JSON Schema, sample payload                 |
+| GET / POST | `/api/endpoints`              | list / create (the signing secret is returned only here)            |
+| GET, PATCH | `/api/endpoints/{id}`         | read / enable, disable, change URL or event types                   |
+| POST       | `/api/events`                 | publish an event (`Idempotency-Key` header), fans out               |
+| GET        | `/api/events`                 | incoming event history                                              |
+| GET        | `/api/deliveries`             | list, filter by `status`, `endpoint_id`, `event_id`, `event_type`   |
+| GET        | `/api/deliveries/stats`       | counts by status (`endpoint_id` filter optional)                    |
+| GET        | `/api/deliveries/activity`    | deliveries per time bucket (`range`, `endpoint_id`)                 |
+| GET        | `/api/deliveries/{id}`        | detail: payload + attempt log                                       |
+| POST       | `/api/deliveries/{id}/replay` | re-queue a failed delivery                                          |
+| GET        | `/api/stream`                 | SSE: `delivery.updated` after every delivery state change           |
+| POST       | `/mock/{ok,fail,reject}`      | demo receivers (verify the signature, then answer)                  |
+| POST       | `/mock/flaky?fail=N`          | fails the first N requests per message, then 200                    |
+| POST       | `/mock/slow?seconds=S`        | answers after S seconds (default 15, past the 10 s timeout)         |
+| POST       | `/api/demo/reset`             | **wipes** endpoints, events, deliveries (event types stay)          |
+| POST       | `/api/demo/seed`              | **wipes** endpoints, events, deliveries; seeds a month of demo data |
 
 Errors always look like `{"error": {"code": "...", "message": "..."}}`.
 
 ### Try it
+
+For a filled dashboard, use **Seed** at the top of the test panel (or
+`curl -X POST localhost:8000/api/demo/seed`): it deletes everything first, then writes six
+endpoints on the mock receivers, a month of their deliveries, and a few live events. **Reset**
+next to it only empties the database.
 
 ```bash
 curl -s localhost:8000/api/endpoints -H 'content-type: application/json' \

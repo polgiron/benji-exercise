@@ -2,15 +2,7 @@
 import { Check, Copy } from '@lucide/vue'
 import { Button, Card } from '@repo/ui'
 import { useClipboard } from '@vueuse/core'
-import { mockReceiverUrl } from '~/api/mock'
-
-const RECEIVERS = [
-  { path: 'ok', answer: '200', does: 'Accepts every delivery.' },
-  { path: 'flaky?fail=2', answer: '503 ×2, then 200', does: 'Succeeds on the 3rd attempt.' },
-  { path: 'fail', answer: '500', does: 'Retried until attempts run out, then failed.' },
-  { path: 'reject', answer: '400', does: 'Terminal: failed at once, no retry.' },
-  { path: 'slow?seconds=15', answer: 'after 15 s', does: 'Times out (10 s) and is retried.' },
-]
+import { MOCK_RECEIVERS, mockReceiverUrl } from '~/api/mock'
 
 const { copy, copied, text } = useClipboard({ copiedDuring: 1500 })
 </script>
@@ -27,7 +19,7 @@ const { copy, copied, text } = useClipboard({ copiedDuring: 1500 })
     <Card class="gap-0 py-0">
       <ul class="divide-y">
         <li
-          v-for="receiver in RECEIVERS"
+          v-for="receiver in MOCK_RECEIVERS"
           :key="receiver.path"
           class="flex items-start gap-2 px-3 py-2"
         >

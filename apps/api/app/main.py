@@ -9,7 +9,7 @@ from app.bus import Bus
 from app.config import Settings, settings
 from app.db import Database
 from app.errors import install_error_handlers
-from app.routes import deliveries, endpoints, event_types, events, mock, stream
+from app.routes import deliveries, demo, endpoints, event_types, events, mock, stream
 from app.services.deliveries import summaries
 from app.shutdown import on_exit_signal
 from app.worker import DeliveryWorker
@@ -65,6 +65,7 @@ def create_app(
     app.include_router(stream.router)
     if config.mock_receivers:
         app.include_router(mock.router)
+        app.include_router(demo.router)
 
     @app.get("/api/health")
     async def health() -> dict[str, str]:

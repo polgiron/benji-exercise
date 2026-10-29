@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clock import utcnow
@@ -18,6 +19,18 @@ async def _check_event_types(session: AsyncSession, keys: list[str]) -> list[str
     if unknown:
         raise ApiError(422, "unknown_event_type", f"Unknown event type: {', '.join(unknown)}")
     return unique
+
+
+async def _commit(session: AsyncSession, url: str) -> None:
+    """Commit, turning the UNIQUE(url) violation into a 409. The constraint decides, not a
+    lookup first: two concurrent creates can't both get through."""
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        if "endpoints.url" not in str(exc.orig):
+            raise
+        raise ApiError(409, "endpoint_url_taken", f"An endpoint already sends to {url}") from exc
 
 
 async def list_endpoints(session: AsyncSession) -> Sequence[Endpoint]:
@@ -45,7 +58,7 @@ async def create_endpoint(session: AsyncSession, data: EndpointCreate) -> Endpoi
         subscriptions=[Subscription(event_type=k) for k in event_types],
     )
     session.add(endpoint)
-    await session.commit()
+    await _commit(session, endpoint.url)
     return endpoint
 
 
@@ -63,6 +76,6 @@ async def update_endpoint(
     if data.enabled is not None:
         endpoint.enabled = data.enabled
     endpoint.updated_at = utcnow()
-    await session.commit()
+    await _commit(session, endpoint.url)
     await session.refresh(endpoint)
     return endpoint

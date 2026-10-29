@@ -4,6 +4,8 @@ import { BrandMark, Button, Card, cn } from '@repo/ui'
 
 const endpoints = useEndpoints()
 const stats = useDeliveryStats()
+// The latest deliveries card's query: same key, no extra request, patched live by the stream.
+const latest = useDeliveries({ limit: 5 })
 
 const steps = computed(() => {
   const counts = stats.data.value
@@ -23,7 +25,11 @@ const steps = computed(() => {
     {
       title: 'Watch it land',
       text: 'Deliveries update live as they succeed, retry or fail.',
-      done: counts.succeeded > 0,
+      // Landed = the first attempt is in, whatever its answer: waiting for a success would
+      // keep this open through a flaky receiver's retries, and forever on /mock/fail.
+      done:
+        counts.succeeded + counts.failed > 0 ||
+        !!latest.data.value?.some((delivery) => delivery.attempt_count > 0),
       action: { to: '/deliveries', label: 'Open deliveries' },
     },
   ]

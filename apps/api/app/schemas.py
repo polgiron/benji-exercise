@@ -135,3 +135,19 @@ class DeliveryActivity(BaseModel):
     range: ActivityRange
     bucket_seconds: int
     buckets: list[ActivityBucket]
+
+
+class DemoReset(BaseModel):
+    """What POST /api/demo/reset deleted."""
+
+    endpoints: int
+    events: int
+    deliveries: int
+
+
+class DemoSeeded(BaseModel):
+    """What POST /api/demo/seed wrote, after wiping what was there."""
+
+    endpoints: int
+    events: int
+    deliveries: int
