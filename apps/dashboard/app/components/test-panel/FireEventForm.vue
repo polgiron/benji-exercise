@@ -81,7 +81,7 @@ const isResubmit = computed(
         v-model="form.payloadText.value"
         rows="9"
         spellcheck="false"
-        class="font-mono text-code"
+        class="font-mono text-xs"
       />
     </div>
 

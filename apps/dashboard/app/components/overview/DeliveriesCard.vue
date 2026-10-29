@@ -36,7 +36,7 @@ const now = useNow()
           >
             <div class="min-w-0 flex-1">
               <p class="font-mono text-xs">{{ delivery.event_type }}</p>
-              <p class="truncate font-mono text-2xs text-muted-foreground">
+              <p class="truncate font-mono text-xs text-muted-foreground">
                 {{ delivery.endpoint_url }}
               </p>
             </div>

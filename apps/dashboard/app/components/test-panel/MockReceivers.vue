@@ -32,7 +32,7 @@ const { copy, copied, text } = useClipboard({ copiedDuring: 1500 })
           class="flex items-start gap-2 px-3 py-2"
         >
           <div class="min-w-0 flex-1">
-            <p class="truncate font-mono text-2xs">/mock/{{ receiver.path }}</p>
+            <p class="truncate font-mono text-xs">/mock/{{ receiver.path }}</p>
             <p class="text-xs text-muted-foreground">
               <span class="font-medium text-foreground">{{ receiver.answer }}</span> ·
               {{ receiver.does }}

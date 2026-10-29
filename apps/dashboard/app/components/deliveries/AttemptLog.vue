@@ -41,7 +41,7 @@ const isSuccess = (status: number | null) => !!status && status >= 200 && status
         </div>
         <p
           v-if="attempt.response_body"
-          class="truncate font-mono text-2xs text-muted-foreground"
+          class="truncate font-mono text-xs text-muted-foreground"
           :title="attempt.response_body"
         >
           {{ attempt.response_body }}

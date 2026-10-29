@@ -8,8 +8,14 @@ const props = defineProps<{
 </script>
 
 <template>
-  <!-- As many tiles per row as fit at `--spacing-stat` each: wraps in a narrow card. -->
-  <dl data-slot="stat-grid" :class="cn('grid grid-cols-stats gap-2', props.class)">
-    <slot />
-  </dl>
+  <!-- Columns follow the space the grid gets (a container query), not the viewport: it sits
+       in half-width cards as well as full-width ones. -->
+  <div class="@container">
+    <dl
+      data-slot="stat-grid"
+      :class="cn('grid grid-cols-2 gap-2 @xs:grid-cols-3 @lg:grid-cols-5', props.class)"
+    >
+      <slot />
+    </dl>
+  </div>
 </template>

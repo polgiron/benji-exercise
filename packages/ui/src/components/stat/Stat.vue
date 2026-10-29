@@ -14,7 +14,7 @@ const props = defineProps<{
 
 <template>
   <div data-slot="stat" :class="cn('rounded-input bg-muted px-3 py-2', props.class)">
-    <dt class="text-2xs text-muted-foreground">{{ label }}</dt>
+    <dt class="text-xs text-muted-foreground">{{ label }}</dt>
     <dd :class="statValueVariants({ tone })">{{ value }}</dd>
   </div>
 </template>

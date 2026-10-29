@@ -13,8 +13,8 @@ export const codeBlockVariants = cva(
         muted: 'bg-muted',
       },
       size: {
-        default: 'p-3 text-code',
-        sm: 'p-2 text-2xs',
+        default: 'p-3 text-xs',
+        sm: 'p-2 text-xs',
         // One line that truncates rather than scrolls (an ID, a secret).
         line: 'px-3 py-2 text-xs truncate whitespace-nowrap',
       },

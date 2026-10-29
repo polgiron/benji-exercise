@@ -14,7 +14,7 @@ useDeliveryStream()
           <NuxtPage />
         </div>
       </main>
-      <TestPanel class="w-panel shrink-0" />
+      <TestPanel class="w-96 shrink-0" />
     </div>
     <Toaster rich-colors />
   </div>

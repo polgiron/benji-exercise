@@ -19,7 +19,7 @@ export const badgeVariants = cva(
         warning: 'border-transparent bg-warning/10 text-warning-foreground',
         info: 'border-transparent bg-info/10 text-info-foreground',
         danger: 'border-transparent bg-destructive/10 text-destructive-foreground',
-        code: 'border-transparent bg-secondary text-secondary-foreground font-mono text-2xs',
+        code: 'border-transparent bg-secondary text-secondary-foreground font-mono text-xs',
       },
     },
     defaultVariants: {

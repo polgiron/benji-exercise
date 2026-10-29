@@ -9,11 +9,6 @@
 /* Scan this package's components for classes, wherever the app lives. */
 @source '../components';
 
-/* StatGrid: as many columns as fit at --spacing-stat each. */
-@utility grid-cols-stats {
-  grid-template-columns: repeat(auto-fit, minmax(var(--spacing-stat), 1fr));
-}
-
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {

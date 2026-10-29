@@ -44,7 +44,7 @@ const columns = computed(() => (props.showEndpoint ? 7 : 6))
         <DeliveryStatusBadge :status="delivery.status" />
         <span
           v-if="delivery.last_error && delivery.status !== EDeliveryStatus.SUCCEEDED"
-          class="max-w-48 truncate text-2xs text-muted-foreground"
+          class="max-w-48 truncate text-xs text-muted-foreground"
           :title="delivery.last_error"
         >
           {{ describeLastError(delivery.last_error) }}

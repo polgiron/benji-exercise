@@ -16,7 +16,7 @@ const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path.s
 
 <template>
   <header class="border-b bg-card">
-    <nav class="flex h-topbar items-center gap-6 px-6">
+    <nav class="flex h-14 items-center gap-6 px-6">
       <NuxtLink to="/" class="flex items-center gap-2 font-semibold">
         <IconTile><Webhook /></IconTile>
         Benji Webhooks
