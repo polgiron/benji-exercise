@@ -2,6 +2,7 @@
 
 Benji take-home. Budget: one working day. Runs locally, no external infrastructure.
 Goal: a small, correct, well-tested vertical slice rather than a sprawling system.
+Backend build order: [API_PLAN.md](API_PLAN.md).
 
 ## 1. Architecture at a glance
 
@@ -100,7 +101,7 @@ off-the-shelf verifiers:
 
 1. **Event dedup**: `Idempotency-Key` header on `POST /api/events` (UNIQUE column). A re-submit
    returns `200 {deduplicated: true, event}` instead of `201`; same key + different payload →
-   `409`. The dashboard shows the deduplicated result explicitly.
+   `422` (client bug, as in the IETF Idempotency-Key draft). The dashboard shows the deduplicated result explicitly.
 2. **One delivery row per (event, endpoint)**: DB unique constraint — can't be bypassed by bugs.
 3. **No concurrent sends**: the atomic claim means a delivery is held by one worker at a time.
 4. **Never re-sent after success**: Replay is only allowed from `failed` (`409` otherwise);
@@ -180,7 +181,7 @@ deterministic and never sleep.
   timeouts/connection errors retried; `429 Retry-After` honoured; max attempts → `failed`;
   `400` terminal; expired lease reclaimed.
 - **Uniqueness**: same idempotency key twice → one event, one delivery per endpoint,
-  `deduplicated: true`; different payload same key → 409; unique constraint rejects a duplicate
+  `deduplicated: true`; different payload same key → 422; unique constraint rejects a duplicate
   delivery insert; two concurrent `run_once()` send once; replay of a succeeded delivery → 409.
 - **Replay**: failed → replay → delivered; attempt history preserved and numbering continues.
 - **Fan-out**: only enabled, subscribed endpoints get deliveries.
