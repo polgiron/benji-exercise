@@ -115,6 +115,9 @@ class Delivery(Base):
     endpoint_id: Mapped[str] = mapped_column(ForeignKey("endpoints.id"), index=True)
     status: Mapped[DeliveryStatus] = mapped_column(String(16), index=True)
     attempt_count: Mapped[int] = mapped_column(Integer, default=0)
+    # Attempts since the last replay (or creation): what max_attempts is checked against.
+    series_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    replay_count: Mapped[int] = mapped_column(Integer, default=0)
     next_attempt_at: Mapped[datetime | None] = mapped_column(UTCDateTime, index=True)
     lease_expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     last_error: Mapped[str | None] = mapped_column(Text)

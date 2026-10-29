@@ -117,6 +117,8 @@ async def fan_out(session: AsyncSession, event: Event) -> list[str]:
             "endpoint_id": endpoint_id,
             "status": DeliveryStatus.pending,
             "attempt_count": 0,
+            "series_attempts": 0,
+            "replay_count": 0,
             "next_attempt_at": now,
             "version": 1,
             "created_at": now,

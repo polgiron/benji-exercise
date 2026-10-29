@@ -64,3 +64,32 @@ def test_any_of_several_signatures_matches():
     h = headers(new)
     h["webhook-signature"] = f"{headers(old)['webhook-signature']} {h['webhook-signature']}"
     verify(new, h, BODY, now=NOW)
+
+
+async def test_outgoing_request_verifies_with_the_secret_from_creation(
+    make_endpoint, fire, worker, receiver, clock
+):
+    secret = (await make_endpoint())["secret"]
+    await fire()
+    await worker.run_once()
+
+    [request] = receiver.requests
+    verify(secret, request.headers, request.content, now=clock.now.timestamp())
+    assert request.headers["content-type"] == "application/json"
+
+
+async def test_retries_keep_the_message_id_and_body_but_sign_a_fresh_timestamp(
+    make_endpoint, fire, worker, receiver, clock
+):
+    secret = (await make_endpoint())["secret"]
+    receiver.respond(500, 200)
+    await fire()
+    await worker.run_once()
+    clock.advance(600)  # beyond the 5-minute tolerance of the first signature
+    await worker.run_once()
+
+    first, second = receiver.requests
+    assert first.headers["webhook-id"] == second.headers["webhook-id"]
+    assert first.content == second.content
+    assert int(second.headers["webhook-timestamp"]) - int(first.headers["webhook-timestamp"]) == 600
+    verify(secret, second.headers, second.content, now=clock.now.timestamp())
