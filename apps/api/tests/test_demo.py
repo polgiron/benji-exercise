@@ -28,6 +28,8 @@ async def test_seed_replaces_everything_that_was_there(client, make_endpoint, fi
     assert all(url.startswith("http://test/mock/") for url in urls)
     # Two endpoints on one URL would show each event twice under what looks like one receiver.
     assert len(set(urls)) == len(urls)
+    # ...and the bare mock URLs stay free for endpoints the reviewer adds.
+    assert all("receiver=" in url for url in urls)
 
 
 async def test_seeding_twice_does_not_add_up(client, db):

@@ -34,7 +34,13 @@ async def client(app) -> AsyncIterator[httpx.AsyncClient]:
 
 @pytest.fixture
 def make_endpoint(client):
-    async def make(event_types=("campaign_updated",), url="https://example.com/hook", **extra):
+    made = 0
+
+    async def make(event_types=("campaign_updated",), url=None, **extra):
+        nonlocal made
+        made += 1
+        # Endpoint URLs are unique: each one gets its own unless the test names it.
+        url = url or f"https://example.com/hook/{made}"
         body = {"url": url, "event_types": list(event_types), **extra}
         r = await client.post("/api/endpoints", json=body)
         assert r.status_code == 201, r.text

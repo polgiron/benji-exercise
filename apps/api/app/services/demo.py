@@ -64,33 +64,33 @@ class DemoEndpoint:
     active_days: tuple[float, float] = (HISTORY_DAYS, 0)
 
 
+# Endpoint URLs are unique. `receiver` gives each its own (the mocks ignore it) and leaves
+# the bare /mock/* URLs free for endpoints the reviewer creates.
 DEMO_ENDPOINTS = [
     DemoEndpoint(
-        "ok",
+        "ok?receiver=crm-sync",
         "CRM sync",
         ("campaign_updated", "member_account_linked", "reward_transaction_created"),
         lambda _: [OK],
     ),
     DemoEndpoint(
-        "flaky?fail=2",
+        "flaky?fail=2&receiver=points-ledger",
         "Points ledger",
         ("reward_transaction_created",),
         lambda n: ([UNAVAILABLE] * 2 + [OK])[:n],
     ),
-    # A real customer's servers each have their own URL; the query only tells the two
-    # /mock/ok endpoints apart (the receiver ignores it).
     DemoEndpoint(
         "ok?receiver=campaign-mirror", "Campaign mirror", ("campaign_updated",), lambda _: [OK]
     ),
     DemoEndpoint(
-        "fail",
+        "fail?receiver=partner-bridge",
         "Partner bridge (down)",
         ("member_account_linked",),
         lambda n: [ERROR] * n,
         active_days=(2, 0),
     ),
     DemoEndpoint(
-        "reject",
+        "reject?receiver=legacy-importer",
         "Legacy importer (retired)",
         ("reward_transaction_created",),
         lambda _: [REJECTED],
@@ -98,7 +98,7 @@ DEMO_ENDPOINTS = [
         active_days=(HISTORY_DAYS, 26),
     ),
     DemoEndpoint(
-        "slow?seconds=15",
+        "slow?seconds=15&receiver=analytics-export",
         "Analytics export (paused)",
         ("campaign_updated",),
         lambda n: [TIMEOUT] * n,

@@ -63,7 +63,8 @@ class Endpoint(Base):
     __tablename__ = "endpoints"
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True)
-    url: Mapped[str] = mapped_column(Text)
+    # Two endpoints on one URL would send that server every event twice.
+    url: Mapped[str] = mapped_column(Text, unique=True)
     description: Mapped[str | None] = mapped_column(Text)
     secret: Mapped[str] = mapped_column(String(64))
     enabled: Mapped[bool] = mapped_column(default=True)

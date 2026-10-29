@@ -29,6 +29,11 @@ function toggleType(key: string, checked: boolean) {
   selected.value = checked ? [...selected.value, key] : selected.value.filter((k) => k !== key)
 }
 
+// The API refuses a second endpoint on a URL (409); this says so before the submit.
+const endpoints = useEndpoints()
+const usedUrls = computed(() => new Map(endpoints.data.value?.map((e) => [e.url, e])))
+const taken = computed(() => usedUrls.value.get(url.value.trim()))
+
 const MOCK_DESCRIPTIONS = new Set(MOCK_RECEIVERS.map((receiver) => receiver.does))
 
 function pickMock(receiver: IMockReceiver) {
@@ -95,7 +100,12 @@ watch(open, (isOpen) => {
             required
             placeholder="https://example.com/webhooks"
             class="font-mono"
+            :aria-invalid="!!taken"
+            :aria-describedby="taken ? 'endpoint-url-taken' : undefined"
           />
+          <p v-if="taken" id="endpoint-url-taken" class="text-xs text-destructive-foreground">
+            Already used by {{ taken.description || taken.id }}: one endpoint per URL.
+          </p>
           <div class="flex flex-wrap items-center gap-1 pt-1">
             <span class="mr-1 text-xs text-muted-foreground">Or a mock receiver:</span>
             <Button
@@ -105,7 +115,12 @@ watch(open, (isOpen) => {
               size="xs"
               :variant="url === mockReceiverUrl(receiver.path) ? 'secondary' : 'outline'"
               :aria-pressed="url === mockReceiverUrl(receiver.path)"
-              :title="`${receiver.answer} · ${receiver.does}`"
+              :disabled="usedUrls.has(mockReceiverUrl(receiver.path))"
+              :title="
+                usedUrls.has(mockReceiverUrl(receiver.path))
+                  ? 'Already used by an endpoint'
+                  : `${receiver.answer} · ${receiver.does}`
+              "
               class="font-mono"
               @click="pickMock(receiver)"
             >
@@ -147,7 +162,10 @@ watch(open, (isOpen) => {
         </fieldset>
         <DialogFooter>
           <Button variant="outline" type="button" @click="open = false">Cancel</Button>
-          <Button type="submit" :disabled="selected.length === 0 || create.isPending.value">
+          <Button
+            type="submit"
+            :disabled="selected.length === 0 || !!taken || create.isPending.value"
+          >
             <LoaderCircle v-if="create.isPending.value" class="animate-spin" />
             Create endpoint
           </Button>

@@ -1,3 +1,10 @@
+from datetime import UTC, datetime
+
+import pytest
+from sqlalchemy.exc import IntegrityError
+
+from app.models import Endpoint
+
 NEW = {"url": "https://example.com/hook", "event_types": ["campaign_updated"]}
 
 
@@ -62,3 +69,38 @@ async def test_update_unknown_endpoint(client):
     r = await client.patch("/api/endpoints/ep_nope", json={"enabled": False})
     assert r.status_code == 404
     assert r.json()["error"]["code"] == "not_found"
+
+
+async def test_a_url_already_taken_is_refused_on_create(client, db):
+    assert (await client.post("/api/endpoints", json=NEW)).status_code == 201
+
+    r = await client.post("/api/endpoints", json=NEW | {"event_types": ["member_account_linked"]})
+
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "endpoint_url_taken"
+    assert len((await client.get("/api/endpoints")).json()) == 1
+
+
+async def test_a_url_already_taken_is_refused_on_update(client, make_endpoint):
+    taken = await make_endpoint(url="https://example.com/taken")
+    other = await make_endpoint(url="https://example.com/other")
+
+    r = await client.patch(f"/api/endpoints/{other['id']}", json={"url": taken["url"]})
+
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "endpoint_url_taken"
+    assert (await client.get(f"/api/endpoints/{other['id']}")).json()["url"] == other["url"]
+    # Keeping its own URL is not a conflict.
+    r = await client.patch(f"/api/endpoints/{other['id']}", json={"url": other["url"]})
+    assert r.status_code == 200
+
+
+async def test_the_database_refuses_a_second_endpoint_on_a_url(db, make_endpoint):
+    """The guarantee is the UNIQUE constraint, not the service: a write that skips the
+    service is refused too."""
+    taken = await make_endpoint(url="https://example.com/taken")
+    now = datetime.now(UTC)
+    async with db.sessions() as s:
+        s.add(Endpoint(id="ep_dup", url=taken["url"], secret="x", created_at=now, updated_at=now))
+        with pytest.raises(IntegrityError):
+            await s.commit()
