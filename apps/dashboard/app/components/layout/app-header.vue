@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { LayoutDashboard, PanelRightClose, PanelRightOpen, Send, Webhook } from '@lucide/vue'
+import {
+  LayoutDashboard,
+  PanelRightClose,
+  PanelRightOpen,
+  Send,
+  ShieldCheck,
+  Webhook,
+} from '@lucide/vue'
 import { BrandMark, Button, cn } from '@repo/ui'
 
 const route = useRoute()
@@ -9,6 +16,7 @@ const links = [
   { to: '/', label: 'Overview', icon: LayoutDashboard },
   { to: '/deliveries', label: 'Deliveries', icon: Send },
   { to: '/endpoints', label: 'Endpoints', icon: Webhook },
+  { to: '/how-it-works', label: 'How it works', icon: ShieldCheck },
 ]
 
 // `/endpoints/ep_…` keeps "Endpoints" lit; `/` only matches itself.
