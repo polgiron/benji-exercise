@@ -2,6 +2,7 @@ import hashlib
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -32,6 +33,31 @@ def request_hash(event_type: str, payload: dict[str, Any]) -> str:
     return hashlib.sha256(_canonical({"type": event_type, "payload": payload}).encode()).hexdigest()
 
 
+def new_event(
+    event_type: str,
+    payload: dict[str, Any],
+    created_at: datetime,
+    idempotency_key: str | None = None,
+) -> Event:
+    """An event row with its envelope: the exact bytes every attempt signs and sends."""
+    event_id = new_id("evt")
+    envelope = {
+        "id": event_id,
+        "type": event_type,
+        "created_at": created_at.isoformat().replace("+00:00", "Z"),
+        "data": payload,
+    }
+    return Event(
+        id=event_id,
+        event_type=event_type,
+        payload=payload,
+        body=_canonical(envelope),
+        idempotency_key=idempotency_key,
+        request_hash=request_hash(event_type, payload),
+        created_at=created_at,
+    )
+
+
 async def publish_event(
     session: AsyncSession,
     event_type: str,
@@ -49,24 +75,7 @@ async def publish_event(
         raise ApiError(422, "unknown_event_type", f"Unknown event type: {event_type}")
     validate_payload(type_row, payload)
 
-    digest = request_hash(event_type, payload)
-    now = utcnow()
-    event_id = new_id("evt")
-    envelope = {
-        "id": event_id,
-        "type": event_type,
-        "created_at": now.isoformat().replace("+00:00", "Z"),
-        "data": payload,
-    }
-    event = Event(
-        id=event_id,
-        event_type=event_type,
-        payload=payload,
-        body=_canonical(envelope),
-        idempotency_key=idempotency_key,
-        request_hash=digest,
-        created_at=now,
-    )
+    event = new_event(event_type, payload, utcnow(), idempotency_key)
     session.add(event)
     try:
         # Let the UNIQUE constraint decide, never check-then-insert: two concurrent
@@ -74,7 +83,7 @@ async def publish_event(
         await session.flush()
     except IntegrityError:
         await session.rollback()
-        return await _deduplicate(session, idempotency_key, digest)
+        return await _deduplicate(session, idempotency_key, event.request_hash)
 
     delivery_ids = await fan_out(session, event)
     await session.commit()

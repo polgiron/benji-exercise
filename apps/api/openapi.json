@@ -770,6 +770,28 @@
         }
       }
     },
+    "/api/demo/seed": {
+      "post": {
+        "tags": [
+          "demo"
+        ],
+        "summary": "Seed Demo Data",
+        "description": "Test-panel tool: **deletes every endpoint, event and delivery**, then fills the\ndatabase with demo endpoints on the `/mock/*` receivers and a month of deliveries.",
+        "operationId": "seed_demo_data_api_demo_seed_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoSeeded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health",
@@ -1186,6 +1208,30 @@
         ],
         "title": "DeliverySummary",
         "description": "What the deliveries table and the live stream carry. `version` only ever grows:\nclients drop an update whose version is not newer than what they have."
+      },
+      "DemoSeeded": {
+        "properties": {
+          "endpoints": {
+            "type": "integer",
+            "title": "Endpoints"
+          },
+          "events": {
+            "type": "integer",
+            "title": "Events"
+          },
+          "deliveries": {
+            "type": "integer",
+            "title": "Deliveries"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoints",
+          "events",
+          "deliveries"
+        ],
+        "title": "DemoSeeded",
+        "description": "What POST /api/demo/seed wrote, after wiping what was there."
       },
       "EndpointCreate": {
         "properties": {

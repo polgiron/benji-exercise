@@ -284,6 +284,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/demo/seed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Seed Demo Data
+         * @description Test-panel tool: **deletes every endpoint, event and delivery**, then fills the
+         *     database with demo endpoints on the `/mock/*` receivers and a month of deliveries.
+         */
+        post: operations["seed_demo_data_api_demo_seed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -483,6 +504,18 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * DemoSeeded
+         * @description What POST /api/demo/seed wrote, after wiping what was there.
+         */
+        DemoSeeded: {
+            /** Endpoints */
+            endpoints: number;
+            /** Events */
+            events: number;
+            /** Deliveries */
+            deliveries: number;
         };
         /** EndpointCreate */
         EndpointCreate: {
@@ -1149,6 +1182,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    seed_demo_data_api_demo_seed_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoSeeded"];
                 };
             };
         };

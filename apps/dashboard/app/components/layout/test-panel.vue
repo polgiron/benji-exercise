@@ -18,6 +18,7 @@ import { Card, IconTile } from '@repo/ui'
     <div class="flex-1 space-y-6 overflow-y-auto px-5 py-4">
       <FireEventForm />
       <MockReceivers />
+      <DemoData />
     </div>
   </Card>
 </template>
