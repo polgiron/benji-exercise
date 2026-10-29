@@ -26,9 +26,7 @@ const detail = useDelivery(() => props.delivery.id)
         Attempts · <span class="font-mono">{{ delivery.id }}</span>
       </h4>
       <Skeleton v-if="detail.isPending.value" class="h-32" />
-      <p v-else-if="detail.isError.value" class="text-xs text-destructive-foreground">
-        {{ detail.error.value?.message }}
-      </p>
+      <QueryError v-else-if="detail.isError.value" :query="detail" class="text-xs" />
       <AttemptLog v-else-if="detail.data.value" :attempts="detail.data.value.attempts" />
     </div>
   </div>

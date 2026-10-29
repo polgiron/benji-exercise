@@ -22,9 +22,7 @@ const now = useNow()
       <div>
         <h3 class="mb-2 text-xs font-medium text-muted-foreground">Latest</h3>
         <Skeleton v-if="latest.isPending.value" class="h-32" />
-        <p v-else-if="latest.isError.value" class="text-sm text-destructive-foreground">
-          {{ latest.error.value?.message }}
-        </p>
+        <QueryError v-else-if="latest.isError.value" :query="latest" class="text-sm" />
         <p v-else-if="latest.data.value?.length === 0" class="text-sm text-muted-foreground">
           No deliveries — fire an event from the test panel.
         </p>

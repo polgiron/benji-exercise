@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Button,
   Card,
   Skeleton,
   Table,
@@ -18,9 +19,20 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { showEndpoint: true })
+defineEmits<{ clearFilters: [] }>()
+
 const deliveries = useDeliveries(() => props.filters)
+const endpoints = useEndpoints()
 const expandedId = ref<string>()
 const columns = computed(() => (props.showEndpoint ? 7 : 6))
+// Without the endpoint column, the endpoint filter is the page's scope, not the user's choice.
+const isFiltered = computed(
+  () => !!props.filters.status || (props.showEndpoint && !!props.filters.endpointId),
+)
+// The API refuses to replay into a paused endpoint: say so before the click, not after.
+const pausedEndpointIds = computed(
+  () => new Set(endpoints.data.value?.filter((e) => !e.enabled).map((e) => e.id)),
+)
 
 function toggle(id: string) {
   expandedId.value = expandedId.value === id ? undefined : id
@@ -48,10 +60,16 @@ function toggle(id: string) {
           </TableRow>
         </template>
         <TableEmpty v-else-if="deliveries.isError.value" :colspan="columns">
-          <span class="text-destructive-foreground">{{ deliveries.error.value?.message }}</span>
+          <QueryError :query="deliveries" class="justify-center" />
         </TableEmpty>
         <TableEmpty v-else-if="deliveries.data.value?.length === 0" :colspan="columns">
-          <span class="text-muted-foreground">
+          <span v-if="isFiltered" class="text-muted-foreground">
+            No deliveries match these filters —
+            <Button variant="link" size="inline" @click="$emit('clearFilters')">
+              clear filters
+            </Button>
+          </span>
+          <span v-else class="text-muted-foreground">
             No deliveries — fire an event from the test panel.
           </span>
         </TableEmpty>
@@ -62,6 +80,7 @@ function toggle(id: string) {
           :delivery="delivery"
           :expanded="expandedId === delivery.id"
           :show-endpoint="showEndpoint"
+          :endpoint-paused="pausedEndpointIds.has(delivery.endpoint_id)"
           @toggle="toggle(delivery.id)"
         />
       </TableBody>

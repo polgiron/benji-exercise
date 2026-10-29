@@ -31,9 +31,7 @@ const enabledCount = computed(() => endpoints.data.value?.filter((e) => e.enable
     </CardHeader>
     <CardContent>
       <Skeleton v-if="endpoints.isPending.value" class="h-32" />
-      <p v-else-if="endpoints.isError.value" class="text-sm text-destructive-foreground">
-        {{ endpoints.error.value?.message }}
-      </p>
+      <QueryError v-else-if="endpoints.isError.value" :query="endpoints" class="text-sm" />
       <p v-else-if="endpoints.data.value?.length === 0" class="text-sm text-muted-foreground">
         No endpoints yet —
         <NuxtLink to="/endpoints" class="text-primary hover:underline">create one</NuxtLink>.

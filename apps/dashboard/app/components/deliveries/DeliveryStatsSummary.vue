@@ -20,9 +20,7 @@ const ORDER = [
 
 <template>
   <Skeleton v-if="stats.isPending.value" class="h-14" />
-  <p v-else-if="stats.isError.value" class="text-sm text-destructive-foreground">
-    {{ stats.error.value?.message }}
-  </p>
+  <QueryError v-else-if="stats.isError.value" :query="stats" class="text-sm" />
   <StatGrid v-else-if="stats.data.value">
     <Stat
       v-for="status in ORDER"

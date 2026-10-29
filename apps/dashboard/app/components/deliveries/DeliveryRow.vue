@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronRight, LoaderCircle, RotateCcw } from '@lucide/vue'
-import { Button, TableCell, TableRow, cn } from '@repo/ui'
+import { Button, TableCell, TableRow, Tooltip, TooltipContent, TooltipTrigger, cn } from '@repo/ui'
 import { formatAgo } from '@repo/utils'
 import { EDeliveryStatus, type IDeliverySummary } from '~/api/types'
 import { describeLastError } from '~/utils/deliveryStatus'
@@ -9,6 +9,7 @@ interface Props {
   delivery: IDeliverySummary
   expanded: boolean
   showEndpoint: boolean
+  endpointPaused: boolean
 }
 
 const props = defineProps<Props>()
@@ -64,17 +65,24 @@ const columns = computed(() => (props.showEndpoint ? 7 : 6))
       {{ formatAgo(delivery.updated_at, now) }}
     </TableCell>
     <TableCell class="text-right">
-      <Button
-        v-if="delivery.status === EDeliveryStatus.FAILED"
-        variant="outline"
-        size="xs"
-        :disabled="replay.isPending.value"
-        @click.stop="replay.mutate(delivery.id)"
-      >
-        <LoaderCircle v-if="replay.isPending.value" class="animate-spin" />
-        <RotateCcw v-else />
-        Replay
-      </Button>
+      <Tooltip v-if="delivery.status === EDeliveryStatus.FAILED" :disabled="!endpointPaused">
+        <!-- A disabled button gets no pointer events: the tooltip hangs on a wrapper. -->
+        <TooltipTrigger as-child>
+          <span class="inline-flex" @click.stop>
+            <Button
+              variant="outline"
+              size="xs"
+              :disabled="replay.isPending.value || endpointPaused"
+              @click="replay.mutate(delivery.id)"
+            >
+              <LoaderCircle v-if="replay.isPending.value" class="animate-spin" />
+              <RotateCcw v-else />
+              Replay
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Endpoint paused: enable it to replay</TooltipContent>
+      </Tooltip>
     </TableCell>
   </TableRow>
   <TableRow v-if="expanded" class="hover:bg-transparent">

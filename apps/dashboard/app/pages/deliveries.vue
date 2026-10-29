@@ -58,6 +58,6 @@ function setFilter(name: 'status' | 'endpoint_id', value: unknown) {
         </SelectContent>
       </Select>
     </PageHeader>
-    <DeliveriesTable :filters="filters" />
+    <DeliveriesTable :filters="filters" @clear-filters="router.replace({ query: {} })" />
   </section>
 </template>

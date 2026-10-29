@@ -39,7 +39,7 @@ const isUpdating = (id: string) => update.isPending.value && update.variables.va
           </TableRow>
         </template>
         <TableEmpty v-else-if="endpoints.isError.value" :colspan="3">
-          <span class="text-destructive-foreground">{{ endpoints.error.value?.message }}</span>
+          <QueryError :query="endpoints" class="justify-center" />
         </TableEmpty>
         <TableEmpty v-else-if="endpoints.data.value?.length === 0" :colspan="3">
           <span class="text-muted-foreground">

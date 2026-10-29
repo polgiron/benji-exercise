@@ -28,9 +28,7 @@ const update = useUpdateEndpoint()
     </NuxtLink>
 
     <Skeleton v-if="endpoint.isPending.value" class="h-20" />
-    <p v-else-if="endpoint.isError.value" class="text-destructive-foreground">
-      {{ endpoint.error.value?.message }}
-    </p>
+    <QueryError v-else-if="endpoint.isError.value" :query="endpoint" />
     <template v-else-if="endpoint.data.value">
       <PageHeader>
         <template #title>
