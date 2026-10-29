@@ -2,6 +2,7 @@
 
 Benji take-home. Budget: one working day. Runs locally, no external infrastructure.
 Goal: a small, correct, well-tested vertical slice rather than a sprawling system.
+Backend build order: [API_PLAN.md](API_PLAN.md).
 
 ## 1. Architecture at a glance
 
@@ -26,12 +27,14 @@ wrap `uv run …` so `pnpm dev` / `pnpm test` drive both apps. Shared packages: 
 (shadcn-vue components, design tokens, light/dark theme), `@repo/utils`, `@repo/eslint-config`,
 `@repo/typescript-config`.
 
-## 2. Data model (SQLite, SQLAlchemy 2 async + aiosqlite)
+## 2. Data model (SQLite, SQLAlchemy 2 async + aiosqlite; column detail in [API_PLAN.md](API_PLAN.md))
 
 | table               | key columns                                                                                                                                                               | notes                                         |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `endpoints`         | `id`, `url`, `event_types` (JSON), `secret`, `enabled`, `created_at`                                                                                                      | single implicit customer (multi-tenancy cut)  |
-| `events`            | `id`, `type`, `payload` (JSON), `idempotency_key` **UNIQUE**, `payload_hash`, `created_at`                                                                                | dedup of re-submits                           |
+| `event_types`       | `key` PK, `description`, `sample_payload` (JSON)                                                                                                                          | catalogue, seeded at startup                  |
+| `endpoints`         | `id`, `url`, `description`, `secret`, `enabled`, `created_at`                                                                                                             | single implicit customer (multi-tenancy cut)  |
+| `subscriptions`     | `endpoint_id`, `event_type` → event_types; **PK(endpoint_id, event_type)**                                                                                                | link rows behind an endpoint's event types    |
+| `events`            | `id`, `event_type`, `payload` (JSON), `body`, `idempotency_key` **UNIQUE**, `request_hash`, `created_at`                                                                  | dedup of re-submits                           |
 | `deliveries`        | `id`, `event_id`, `endpoint_id`, `status`, `attempt_count`, `next_attempt_at`, `lease_expires_at`, `last_error`, `version`, timestamps; **UNIQUE(event_id, endpoint_id)** | one row = one (event, endpoint) pair, forever |
 | `delivery_attempts` | `id`, `delivery_id`, `number`, `started_at`, `duration_ms`, `response_status`, `response_body` (truncated 2 KB), `error`, `trigger` (`auto` / `replay`)                   | append-only history                           |
 
@@ -100,7 +103,7 @@ off-the-shelf verifiers:
 
 1. **Event dedup**: `Idempotency-Key` header on `POST /api/events` (UNIQUE column). A re-submit
    returns `200 {deduplicated: true, event}` instead of `201`; same key + different payload →
-   `409`. The dashboard shows the deduplicated result explicitly.
+   `422` (client bug, as in the IETF Idempotency-Key draft). The dashboard shows the deduplicated result explicitly.
 2. **One delivery row per (event, endpoint)**: DB unique constraint — can't be bypassed by bugs.
 3. **No concurrent sends**: the atomic claim means a delivery is held by one worker at a time.
 4. **Never re-sent after success**: Replay is only allowed from `failed` (`409` otherwise);
@@ -180,7 +183,7 @@ deterministic and never sleep.
   timeouts/connection errors retried; `429 Retry-After` honoured; max attempts → `failed`;
   `400` terminal; expired lease reclaimed.
 - **Uniqueness**: same idempotency key twice → one event, one delivery per endpoint,
-  `deduplicated: true`; different payload same key → 409; unique constraint rejects a duplicate
+  `deduplicated: true`; different payload same key → 422; unique constraint rejects a duplicate
   delivery insert; two concurrent `run_once()` send once; replay of a succeeded delivery → 409.
 - **Replay**: failed → replay → delivered; attempt history preserved and numbering continues.
 - **Fan-out**: only enabled, subscribed endpoints get deliveries.

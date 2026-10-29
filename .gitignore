@@ -23,3 +23,8 @@ __pycache__/
 
 # claude code
 .claude/worktrees/
+
+# SQLite (API)
+*.db
+*.db-wal
+*.db-shm
