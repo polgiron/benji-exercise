@@ -50,6 +50,77 @@ pnpm test
 Runs pytest for the API and Vitest for the dashboard and utils. API tests alone:
 `cd apps/api && uv run pytest`.
 
+## API
+
+Full design: [docs/PLAN.md](docs/PLAN.md) and [docs/API_PLAN.md](docs/API_PLAN.md). Interactive
+docs at http://localhost:8000/docs.
+
+| method     | path                          | purpose                                                     |
+| ---------- | ----------------------------- | ----------------------------------------------------------- |
+| GET        | `/api/event-types`            | catalogue: description, JSON Schema, sample payload         |
+| GET / POST | `/api/endpoints`              | list / create (the signing secret is returned only here)    |
+| GET, PATCH | `/api/endpoints/{id}`         | read / enable, disable, change URL or event types           |
+| POST       | `/api/events`                 | publish an event (`Idempotency-Key` header), fans out       |
+| GET        | `/api/events`                 | incoming event history                                      |
+| GET        | `/api/deliveries`             | list, filter by `status`, `endpoint_id`, `event_id`         |
+| GET        | `/api/deliveries/{id}`        | detail: payload + attempt log                               |
+| POST       | `/api/deliveries/{id}/replay` | re-queue a failed delivery                                  |
+| GET        | `/api/stream`                 | SSE: `delivery.updated` after every delivery state change   |
+| POST       | `/mock/{ok,fail,reject}`      | demo receivers (verify the signature, then answer)          |
+| POST       | `/mock/flaky?fail=N`          | fails the first N requests per message, then 200            |
+| POST       | `/mock/slow?seconds=S`        | answers after S seconds (default 15, past the 10 s timeout) |
+
+Errors always look like `{"error": {"code": "...", "message": "..."}}`.
+
+### Try it
+
+```bash
+curl -s localhost:8000/api/endpoints -H 'content-type: application/json' \
+  -d '{"url": "http://localhost:8000/mock/flaky?fail=2", "event_types": ["campaign_updated"]}'
+
+curl -s localhost:8000/api/events -H 'content-type: application/json' -H 'Idempotency-Key: demo-1' \
+  -d '{"event_type": "campaign_updated", "payload": {"campaign_id": "cmp_7", "name": "Double points",
+       "status": "active", "starts_at": "2026-11-01T00:00:00Z"}}'
+
+curl -sN localhost:8000/api/stream   # watch it go pending → in_progress → pending → … → succeeded
+```
+
+Run the second command again: same key, same body → `200 {"deduplicated": true}` and no new
+delivery. Same key, different body → `422 idempotency_key_reused`.
+
+### Delivery guarantees
+
+- **At least once.** Only a 2xx is success. Timeouts, network errors, 408/425/429 and 5xx are
+  retried with exponential backoff and jitter (`Retry-After` honoured), up to 5 attempts, then
+  `failed`. Other 4xx are terminal. Failed deliveries can be replayed.
+- **Once per endpoint.** `UNIQUE(event_id, endpoint_id)`, and each delivery is claimed
+  atomically by one worker at a time. If we crash between the receiver's 200 and recording it,
+  it is sent again: receivers dedupe on `webhook-id`, which never changes for a delivery.
+- **No ordering guarantee.** Use the envelope's `created_at`.
+
+### Verifying a webhook (receiver side)
+
+Signatures follow [Standard Webhooks](https://www.standardwebhooks.com/), so any of its libraries
+work. With ours (`apps/api/app/signing.py`, no dependencies beyond the standard library):
+
+```python
+from app.signing import InvalidSignature, verify
+
+def handle(raw_body: bytes, headers, secret: str):
+    try:
+        verify(secret, headers, raw_body)  # raw bytes, before json.loads; 5-minute tolerance
+    except InvalidSignature:
+        return 401
+    ...
+```
+
+### Configuration
+
+Environment variables (prefix `BENJI_`, or `apps/api/.env`): `DATABASE_URL`,
+`RETRY_BASE_SECONDS` (2), `RETRY_CAP_SECONDS` (30), `MAX_ATTEMPTS` (5), `HTTP_TIMEOUT_SECONDS`
+(10), `LEASE_SECONDS` (30), `MOCK_RECEIVERS` (true). Delays are seconds so a demo settles in
+under a minute. The SQLite file is `apps/api/benji.db`; delete it to start fresh.
+
 ## Other scripts
 
 | command          | does                                                                                |

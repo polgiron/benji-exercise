@@ -11,7 +11,12 @@ drafted, scaffolded and implemented under review.
 2. **Plan** — Claude drafted [PLAN.md](PLAN.md) from the brief; I reviewed the design choices
    (outbox-style DB queue, Standard Webhooks signing, SSE + versioned cache merges).
 3. **Scaffold** — Turborepo/pnpm monorepo, uv project, Nuxt + shadcn-vue, OpenAPI → TS types.
-4. **Implementation** — (in progress)
+4. **API plan** — Claude drafted [API_PLAN.md](API_PLAN.md) (build order + tests per step); I
+   challenged it in chat: endpoints vs subscriptions, why both an idempotency key and a request
+   hash, provider vs receiver roles, and asked for a strict JSON Schema per event type.
+5. **API implementation** — built step by step from that plan, each step committed with its
+   tests green.
+6. **Dashboard** — (next)
 
 ## Handover brief that started the build session
 
