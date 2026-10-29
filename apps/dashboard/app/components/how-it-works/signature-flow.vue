@@ -3,7 +3,6 @@ import { Check, Pause, Play, RotateCcw } from '@lucide/vue'
 import {
   Button,
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -86,28 +85,27 @@ const expected = computedAsync(() =>
   <Card>
     <CardHeader>
       <CardTitle>Follow one delivery</CardTitle>
-      <CardDescription
-        >What Benji sends, and what your endpoint checks before trusting it.</CardDescription
-      >
-      <CardAction>
-        <Tabs
-          :model-value="scenario"
-          @update:model-value="(value) => isFlowScenario(value) && selectScenario(value)"
-        >
-          <TabsList>
-            <TabsTrigger
-              v-for="option in Object.values(EFlowScenario)"
-              :key="option"
-              :value="option"
-              class="px-3"
-            >
-              {{ FLOW_SCENARIO_LABELS[option] }}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </CardAction>
+      <CardDescription>
+        What Benji sends, and what your endpoint checks before trusting it.
+      </CardDescription>
     </CardHeader>
-    <CardContent class="space-y-6">
+    <CardContent class="space-y-4">
+      <Tabs
+        :model-value="scenario"
+        class="overflow-x-auto"
+        @update:model-value="(value) => isFlowScenario(value) && selectScenario(value)"
+      >
+        <TabsList>
+          <TabsTrigger
+            v-for="option in Object.values(EFlowScenario)"
+            :key="option"
+            :value="option"
+            class="px-3"
+          >
+            {{ FLOW_SCENARIO_LABELS[option] }}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <FlowDiagram :scenario="scenario" :step="step" class="rounded-card bg-dots" />
 
       <div class="grid gap-6 lg:grid-cols-5">

@@ -112,7 +112,7 @@ const packetPosition = computed(() => {
       </div>
 
       <!-- The request itself, gliding between the nodes. -->
-      <div class="pointer-events-none absolute inset-y-0 right-62 left-62" aria-hidden="true">
+      <div class="pointer-events-none absolute inset-y-0 right-66 left-66" aria-hidden="true">
         <div
           class="absolute z-10 -translate-x-1/2 -translate-y-1/2 transition-[left,top] duration-1000 ease-in-out-quart motion-reduce:transition-none"
           :style="packetPosition"
