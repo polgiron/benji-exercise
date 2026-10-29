@@ -223,6 +223,17 @@ in seconds so a demo settles in under a minute. A real system would use minutes 
 | `LEASE_SECONDS`        | 30                              | After this, a delivery stuck mid-send (crash) is picked up again |
 | `MOCK_RECEIVERS`       | true                            | Turns the fake receivers and Seed on (off in a real deployment)  |
 
+## What we left aside on purpose
+
+These aren't missing: we decided they weren't needed here.
+
+- **A mobile version.** This is a dashboard for working at a desk, with wide tables and a side
+  panel. It is built for a computer screen, and a phone layout wouldn't be worth the effort.
+- **Server-side rendering.** The dashboard runs entirely in the browser (`ssr: false`).
+  Rendering pages on a server pays off when pages can be cached or need to be found by search
+  engines. This is a private, live dashboard whose data changes every second, so there is
+  nothing worth caching.
+
 ## Next steps
 
 What was left out to fit in a day, and what would come next. The reasoning is in
