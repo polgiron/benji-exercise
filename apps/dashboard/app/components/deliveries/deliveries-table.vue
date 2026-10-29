@@ -27,6 +27,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), { showEndpoint: true })
 const deliveries = useDeliveries(() => props.filters)
+const endpoints = useEndpoints()
 const expandedId = ref<string>()
 const columns = computed(() => (props.showEndpoint ? 7 : 6))
 // A filter the user picked, as opposed to the endpoint a detail page pins.
@@ -35,6 +36,10 @@ const filtered = computed(
     !!props.filters.status ||
     !!props.filters.eventType ||
     (props.showEndpoint && !!props.filters.endpointId),
+)
+// The API refuses to replay into a paused endpoint: say so before the click, not after.
+const pausedEndpointIds = computed(
+  () => new Set(endpoints.data.value?.filter((e) => !e.enabled).map((e) => e.id)),
 )
 
 function toggle(id: string) {
@@ -123,6 +128,7 @@ function toggle(id: string) {
           :delivery="delivery"
           :expanded="expandedId === delivery.id"
           :show-endpoint="showEndpoint"
+          :endpoint-paused="pausedEndpointIds.has(delivery.endpoint_id)"
           @toggle="toggle(delivery.id)"
         />
       </TableBody>

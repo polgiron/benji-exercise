@@ -55,10 +55,5 @@ export function useDeliveryCache() {
     if (statusChanged(previous, update)) scheduleRefetch('stats')
   }
 
-  /** After a (re)connect or a refocus: the stream has no backlog, so REST catches up. */
-  function refetchAll() {
-    return queryClient.invalidateQueries({ queryKey: deliveryKeys.all })
-  }
-
-  return { apply, refetchAll }
+  return { apply }
 }
