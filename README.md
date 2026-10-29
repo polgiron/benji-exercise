@@ -214,14 +214,20 @@ What was cut to fit a day, and what comes next. The reasoning behind each cut is
 
 **Before production**
 
-| today                               | next                                                                                                  |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| One implicit customer, no auth      | API keys, and a `customer_id` on every table                                                          |
-| Signing secrets stored in plaintext | Encrypt at rest (KMS); rotation with two valid secrets for a while (verifiers already accept several) |
-| SQLite and one in-process worker    | Postgres with `SELECT … FOR UPDATE SKIP LOCKED`, and workers as separate processes                    |
-| In-memory SSE bus, no backlog       | Postgres `LISTEN/NOTIFY` or Redis pub/sub, and `Last-Event-ID` resume instead of a refetch            |
-| Lists capped at 500 rows            | Cursor pagination on `(created_at, id)`                                                               |
-| Attempts and payloads kept forever  | A retention period                                                                                    |
+Shortcuts this demo takes that a real system couldn't:
+
+- **Auth.** Today anyone can call the API, and everything belongs to one customer. Each customer
+  would get an API key and only see their own endpoints and deliveries.
+- **Secret encryption.** Signing secrets sit in the database as plain text. They should be
+  encrypted, and changing a secret should keep the old one working for a while.
+- **Postgres and separate workers.** SQLite allows one write at a time, and the worker runs
+  inside the API process. With Postgres, several worker processes can share the queue without
+  picking the same delivery.
+- **Durable stream.** Live updates aren't stored anywhere, so after a reconnect the dashboard
+  refetches everything. A stored stream would let it resume where it stopped.
+- **Pagination.** Lists stop at 500 rows. Pages would let you browse all of them.
+- **Retention.** Payloads and attempt logs are kept forever. Old ones should be deleted after a
+  set time.
 
 **Product**
 
