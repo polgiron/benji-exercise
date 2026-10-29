@@ -16,7 +16,19 @@ drafted, scaffolded and implemented under review.
    hash, provider vs receiver roles, and asked for a strict JSON Schema per event type.
 5. **API implementation** — built step by step from that plan, each step committed with its
    tests green.
-6. **Dashboard** — (next)
+6. **Dashboard plan** — Claude drafted [DASHBOARD_PLAN.md](DASHBOARD_PLAN.md) and I reviewed it:
+   the split between the customer dashboard and the test panel, the two levels of endpoint
+   control, how the live view stays accurate.
+7. **Dashboard implementation** — API layer and SSE cache merge first (unit-tested), then the
+   layout and pages, then a pass to compose every surface from `@repo/ui` only.
+8. **Review against the brief** — a separate Claude session checked each requirement of the
+   exercise against the code, ran the checks, then ran the API and dashboard for real: an
+   independent receiver verifying signatures, retries and replay against the `/mock/*`
+   receivers, concurrent re-submits, an API restart mid-retry, and the dashboard in a browser.
+   It found gaps (views stuck on an error after an API outage, no Retry, a misleading empty
+   state under a filter, Replay offered on paused endpoints, docs behind the code); I chose
+   the fixes. The Retry and empty-state ones also landed with the dashboard polish, so the
+   review PR kept those and added the rest.
 
 ## Handover brief that started the build session
 
