@@ -162,10 +162,26 @@ def _payload(event_type: str, at: datetime, n: int, rng: random.Random) -> dict[
     }
 
 
-async def reset(session: AsyncSession) -> None:
+@dataclass(frozen=True)
+class Deleted:
+    endpoints: int
+    events: int
+    deliveries: int
+
+
+async def _delete_all(session: AsyncSession) -> Deleted:
     """Delete every endpoint, event, delivery and attempt. The event-type catalogue stays."""
+    deleted = {}
     for table in (DeliveryAttempt, Delivery, Event, Subscription, Endpoint):
-        await session.execute(delete(table))
+        deleted[table] = (await session.execute(delete(table))).rowcount
+    return Deleted(endpoints=deleted[Endpoint], events=deleted[Event], deliveries=deleted[Delivery])
+
+
+async def reset(session: AsyncSession) -> Deleted:
+    """Empty the database, short of the event types."""
+    deleted = await _delete_all(session)
+    await session.commit()
+    return deleted
 
 
 async def seed(
@@ -178,7 +194,7 @@ async def seed(
     """Reset, then write the demo endpoints and a month of their delivery history, in one
     transaction. Then publish one event of each type for real, so the worker has live
     deliveries to work through (and retry) as the dashboard opens."""
-    await reset(session)
+    await _delete_all(session)
 
     endpoints = [
         (

@@ -4,10 +4,19 @@ from fastapi import APIRouter, Request
 
 from app.clock import utcnow
 from app.deps import Session, notify_changed
-from app.schemas import DemoSeeded
+from app.schemas import DemoReset, DemoSeeded
 from app.services import demo as service
 
 router = APIRouter(prefix="/api/demo", tags=["demo"])
+
+
+@router.post("/reset")
+async def reset_demo_data(session: Session) -> DemoReset:
+    """Test-panel tool: **deletes every endpoint, event and delivery**. Event types stay."""
+    deleted = await service.reset(session)
+    return DemoReset(
+        endpoints=deleted.endpoints, events=deleted.events, deliveries=deleted.deliveries
+    )
 
 
 @router.post("/seed")

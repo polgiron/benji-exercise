@@ -15,6 +15,7 @@ export type IDeliveryStats = Schemas['DeliveryStats']
 export type IAttempt = Schemas['AttemptOut']
 export type IDeliveryActivity = Schemas['DeliveryActivity']
 export type IActivityBucket = Schemas['ActivityBucket']
+export type IDemoReset = Schemas['DemoReset']
 export type IDemoSeeded = Schemas['DemoSeeded']
 
 // Same strings as the API's StrEnums. The schema types `status` and `trigger` as plain

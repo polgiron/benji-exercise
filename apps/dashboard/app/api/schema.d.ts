@@ -284,6 +284,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Demo Data
+         * @description Test-panel tool: **deletes every endpoint, event and delivery**. Event types stay.
+         */
+        post: operations["reset_demo_data_api_demo_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/demo/seed": {
         parameters: {
             query?: never;
@@ -504,6 +524,18 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * DemoReset
+         * @description What POST /api/demo/reset deleted.
+         */
+        DemoReset: {
+            /** Endpoints */
+            endpoints: number;
+            /** Events */
+            events: number;
+            /** Deliveries */
+            deliveries: number;
         };
         /**
          * DemoSeeded
@@ -1182,6 +1214,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_demo_data_api_demo_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoReset"];
                 };
             };
         };

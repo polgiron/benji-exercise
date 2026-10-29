@@ -32,6 +32,19 @@ async def test_seed_replaces_everything_that_was_there(client, make_endpoint, fi
     assert all("receiver=" in url for url in urls)
 
 
+async def test_reset_empties_everything_but_the_event_types(client, db):
+    seeded = (await client.post("/api/demo/seed")).json()
+
+    r = await client.post("/api/demo/reset")
+
+    assert r.status_code == 200, r.text
+    assert r.json() == seeded  # it reports what it deleted
+    async with db.sessions() as s:
+        for model in (Endpoint, Event, Delivery, DeliveryAttempt):
+            assert await s.scalar(select(func.count()).select_from(model)) == 0
+        assert await s.scalar(select(func.count()).select_from(EventType)) == 3
+
+
 async def test_seeding_twice_does_not_add_up(client, db):
     first = (await client.post("/api/demo/seed")).json()
     second = (await client.post("/api/demo/seed")).json()
@@ -89,7 +102,7 @@ async def test_every_seeded_payload_matches_its_schema(client, db):
             validate_payload(types[event.event_type], event.payload)
 
 
-async def test_seed_is_off_with_the_mock_receivers(tmp_path):
+async def test_demo_tools_are_off_without_the_mock_receivers(tmp_path):
     settings = Settings(
         database_url=f"sqlite+aiosqlite:///{tmp_path / 'off.db'}", mock_receivers=False
     )
@@ -98,3 +111,4 @@ async def test_seed_is_off_with_the_mock_receivers(tmp_path):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
             assert (await c.post("/api/demo/seed")).status_code == 404
+            assert (await c.post("/api/demo/reset")).status_code == 404
