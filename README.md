@@ -6,6 +6,60 @@ dashboard shows every delivery live.
 
 - **Design & trade-offs:** [docs/PLAN.md](docs/PLAN.md)
 - **AI usage:** [docs/AI_USAGE.md](docs/AI_USAGE.md)
+- **What's built:** [below](#whats-built) · **Next steps:** [below](#next-steps)
+
+## What's built
+
+### API (`apps/api`)
+
+- **Endpoints and subscriptions.** A customer registers a URL subscribed to one or more event
+  types. It can switch off the whole endpoint or a single event type. The signing secret is
+  returned once, at creation.
+- **Strict event catalogue.** Three event types, each with a JSON Schema checked on ingestion and
+  a sample payload.
+- **Idempotent ingestion.** An `Idempotency-Key` stored under a `UNIQUE` constraint, with a hash
+  of the request: the same key and body is deduplicated, the same key with another body is a
+  `422`. The event and its deliveries are written in one transaction.
+- **Reliable delivery.** A `deliveries` table worked by an in-process worker (outbox style, no
+  queue to run). Each delivery is claimed atomically under a lease, retried with exponential
+  backoff and jitter (`Retry-After` honoured) up to 5 attempts, and survives a restart because
+  its state lives in the database.
+- **Signed delivery.** [Standard Webhooks](https://www.standardwebhooks.com/) HMAC-SHA256 over
+  the id, timestamp and raw body, re-signed on every attempt.
+- **Replay** of failed deliveries, keeping the same `webhook-id` so receivers can dedupe.
+- **Observable.** An attempt log per delivery (status code, duration, error, response excerpt),
+  counts by status, activity over time, and an SSE stream of every state change.
+- **Demo tooling.** Mock receivers that verify the signature (`ok`, `fail`, `reject`, `flaky`,
+  `slow`), plus Seed and Reset.
+
+### Dashboard (`apps/dashboard`)
+
+- **Overview.** A getting-started guide until the first delivery, a deliveries-over-time chart,
+  KPIs, a status breakdown, the latest deliveries live, and the endpoints.
+- **Deliveries.** A live table with status, attempts, a next-retry countdown and filters kept in
+  the URL. A row expands to its payload and attempt log, and failed rows can be replayed.
+- **Endpoints.** A list with an enable switch and a create dialog that shows the secret once. An
+  endpoint's page has a switch per event type, its stats and its deliveries.
+- **Test panel** (toggled from the header, not part of the customer's UI). Fire an event with a
+  payload and idempotency key and see whether it was deduplicated. It also lists the mock
+  receivers and the stream's live/reconnecting state, and has Seed and Reset.
+- **How it works.** An animated walk-through of a delivery and its retries, and of what the
+  signature proves to the receiver.
+- **Accuracy over time.** Stream updates are written into the Vue Query cache, and only a newer
+  `version` of a delivery is applied. Lists are refetched after a reconnect.
+- **Async UX.** Skeletons while loading, and empty states that suggest a next action. Buttons are
+  disabled while their request runs. A failed action shows a toast, and a failed load shows the
+  error in place with Try again. Light and dark themes.
+
+### A five-minute tour
+
+1. `pnpm dev`, open http://localhost:3000, then **Seed** in the test panel (header toggle).
+2. **Deliveries**: watch the live events settle, expand a failed one and **Replay** it.
+3. **Endpoints**: create one on `http://localhost:8000/mock/flaky?fail=2` and copy its secret.
+4. In the test panel, fire an event of a type it subscribes to. On **Deliveries**, its delivery
+   fails twice, then succeeds on the third attempt. Re-submit with the same key: it is reported
+   as deduplicated, and no delivery is added.
+5. **How it works** for the picture of what just happened.
 
 ## Stack
 
@@ -152,3 +206,34 @@ under a minute. The SQLite file is `apps/api/benji.db`; delete it to start fresh
 | `pnpm lint`      | ruff (API), ESLint (dashboard, ui, utils)                                           |
 | `pnpm format`    | Prettier on everything but the API (ruff formats Python)                            |
 | `pnpm gen:api`   | dumps FastAPI's OpenAPI schema and regenerates `apps/dashboard/app/api/schema.d.ts` |
+
+## Next steps
+
+What was cut to fit a day, and what comes next. The reasoning behind each cut is in
+[docs/PLAN.md §10](docs/PLAN.md#10-scope-cuts-deliberate-and-next-steps).
+
+**Before production**
+
+| today                               | next                                                                                                  |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| One implicit customer, no auth      | API keys, and a `customer_id` on every table                                                          |
+| Signing secrets stored in plaintext | Encrypt at rest (KMS); rotation with two valid secrets for a while (verifiers already accept several) |
+| SQLite and one in-process worker    | Postgres with `SELECT … FOR UPDATE SKIP LOCKED`, and workers as separate processes                    |
+| In-memory SSE bus, no backlog       | Postgres `LISTEN/NOTIFY` or Redis pub/sub, and `Last-Event-ID` resume instead of a refetch            |
+| Lists capped at 500 rows            | Cursor pagination on `(created_at, id)`                                                               |
+| Attempts and payloads kept forever  | A retention period                                                                                    |
+
+**Product**
+
+- **Auto-disable an endpoint after N consecutive failures** and tell the customer, plus **bulk
+  replay** ("replay all failed for this endpoint"): break an endpoint, fix it, re-enable, replay.
+- **"Send test event" on an endpoint's page**, as Stripe and Svix offer.
+- **Event-type versioning**: ship a `v2` of one type, pin a version on each subscription, and
+  down-convert the payload for subscribers still on `v1`. The catalogue already promises that
+  removing, renaming or retyping a field needs a new version.
+- **An Events page** grouping deliveries by event (`GET /api/events` exists), and editing an
+  endpoint's URL from the dashboard (`PATCH` exists; it needs a confirm step).
+
+**Quality**
+
+- **End-to-end tests** with Playwright: create an endpoint → fire an event → see it succeed.
