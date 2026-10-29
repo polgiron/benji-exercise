@@ -40,8 +40,9 @@
   --shadow-popover: 0 4px 16px -4px rgb(11 21 48 / 0.12), 0 1px 3px 0 rgb(11 21 48 / 0.05);
   --shadow-modal: 0 20px 48px -12px rgb(11 21 48 / 0.24);
 
-  /* Layout sizes: `h-topbar`, `pt-topbar`, `max-w-content`. */
+  /* Layout sizes: `h-topbar`, `pt-topbar`, `max-w-content`, `w-panel`. */
   --spacing-topbar: 3.5rem;
+  --spacing-panel: 24rem;
   --container-content: 72rem;
 
   /* Motion */
