@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     worker_batch_size: int = 10
     worker_concurrency: int = 10
 
+    # /mock/* receivers for demos and tests; off in a real deployment.
+    mock_receivers: bool = True
+
     # Signature verification tolerance on the receiving side (mock receivers, verify()).
     signature_tolerance_seconds: int = 300
 
