@@ -17,10 +17,13 @@ class Bus:
     def __init__(self, queue_size: int = 1000) -> None:
         self._subscribers: set[asyncio.Queue[Message | None]] = set()
         self._queue_size = queue_size
+        self._closed = False
 
     @asynccontextmanager
     async def subscribe(self) -> AsyncIterator[asyncio.Queue[Message | None]]:
         queue: asyncio.Queue[Message | None] = asyncio.Queue(self._queue_size)
+        if self._closed:
+            queue.put_nowait(None)
         self._subscribers.add(queue)
         try:
             yield queue
@@ -34,9 +37,19 @@ class Bus:
             except asyncio.QueueFull:
                 # Too slow to keep up: end its stream (None), it reconnects and refetches.
                 log.warning("dropping a slow SSE subscriber")
-                self._subscribers.discard(queue)
-                queue.get_nowait()
-                queue.put_nowait(None)
+                self._end(queue)
+
+    def _end(self, queue: asyncio.Queue[Message | None]) -> None:
+        self._subscribers.discard(queue)
+        if queue.full():
+            queue.get_nowait()
+        queue.put_nowait(None)
+
+    def close(self) -> None:
+        """End every stream (None), now and for anyone subscribing after: the server is stopping."""
+        self._closed = True
+        for queue in list(self._subscribers):
+            self._end(queue)
 
     @property
     def subscriber_count(self) -> int:

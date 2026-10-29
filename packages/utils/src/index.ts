@@ -1,1 +1,1 @@
-export { formatDuration, formatRelative } from './time'
+export { formatAgo, formatDuration, formatRelative } from './time'

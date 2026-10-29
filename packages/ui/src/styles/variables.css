@@ -1,7 +1,7 @@
 /*
  * Design tokens that don't change between themes: radius, type, shadows,
  * layout sizes, motion. Each one becomes a Tailwind utility
- * (`--radius-card` → `rounded-card`, `--text-2xs` → `text-2xs`, …).
+ * (`--radius-card` → `rounded-card`, `--text-xs` → `text-xs`, …).
  * Colors live in theme.css.
  */
 @theme {
@@ -28,20 +28,12 @@
     Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Text sizes: Tailwind's xs…9xl scale stays; these fill the gaps a dense
-     ops UI needs. */
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1rem;
-  --text-code: 0.8125rem;
-  --text-code--line-height: 1.25rem;
-
   /* Shadows, by surface. Soft and navy-tinted: cards barely lift off the page. */
   --shadow-card: 0 1px 2px 0 rgb(11 21 48 / 0.03), 0 2px 8px -2px rgb(11 21 48 / 0.05);
   --shadow-popover: 0 4px 16px -4px rgb(11 21 48 / 0.12), 0 1px 3px 0 rgb(11 21 48 / 0.05);
   --shadow-modal: 0 20px 48px -12px rgb(11 21 48 / 0.24);
 
-  /* Layout sizes: `h-topbar`, `pt-topbar`, `max-w-content`. */
-  --spacing-topbar: 3.5rem;
+  /* Layout sizes: `max-w-content`. Spacing and type use Tailwind's own scales. */
   --container-content: 72rem;
 
   /* Motion */

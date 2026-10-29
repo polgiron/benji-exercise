@@ -26,6 +26,8 @@ export const buttonVariants = cva(
         'icon-xs': "size-6 rounded-button [&_svg:not([class*='size-'])]:size-3",
         'icon-sm': 'size-8',
         'icon-lg': 'size-10',
+        // A link-variant button sitting in a line of text: no box of its own.
+        inline: 'h-auto p-0 has-[>svg]:px-0',
       },
     },
     defaultVariants: {

@@ -28,6 +28,9 @@ importers:
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       '@tanstack/vue-query':
         specifier: ^5.105.0
         version: 5.105.0(vue@3.5.44(typescript@5.9.3))

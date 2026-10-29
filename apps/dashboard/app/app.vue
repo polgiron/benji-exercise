@@ -1,32 +1,21 @@
 <script setup lang="ts">
 import { Toaster } from '@repo/ui'
 
-const links = [
-  { to: '/', label: 'Deliveries' },
-  { to: '/endpoints', label: 'Endpoints' },
-]
+// Opened once for the whole app: every page reads the same live cache.
+useDeliveryStream()
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <header class="border-b bg-card">
-      <nav class="mx-auto flex h-topbar max-w-content items-center gap-6 px-4">
-        <span class="font-semibold">Benji Webhooks</span>
-        <NuxtLink
-          v-for="link in links"
-          :key="link.to"
-          :to="link.to"
-          class="text-sm text-muted-foreground hover:text-foreground"
-          active-class="!text-foreground font-medium"
-        >
-          {{ link.label }}
-        </NuxtLink>
-        <ThemeToggle class="ml-auto" />
-      </nav>
-    </header>
-    <main class="mx-auto max-w-content px-4 py-8">
-      <NuxtPage />
-    </main>
+  <div class="flex h-screen flex-col">
+    <AppHeader />
+    <div class="flex min-h-0 flex-1 gap-4 p-4">
+      <main class="min-w-0 flex-1 overflow-y-auto">
+        <div class="mx-auto max-w-content px-2 py-4">
+          <NuxtPage />
+        </div>
+      </main>
+      <TestPanel class="w-96 shrink-0" />
+    </div>
     <Toaster rich-colors />
   </div>
 </template>

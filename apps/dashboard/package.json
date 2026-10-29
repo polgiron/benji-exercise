@@ -16,6 +16,7 @@
   "dependencies": {
     "@lucide/vue": "^1.63.0",
     "@repo/ui": "workspace:*",
+    "@repo/utils": "workspace:*",
     "@tanstack/vue-query": "^5.105.0",
     "@vueuse/core": "^15.0.0",
     "nuxt": "^4.6.3",
