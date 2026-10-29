@@ -1,8 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Header, Query, Response
+from fastapi import APIRouter, Header, Query, Request, Response
 
-from app.deps import Session
+from app.deps import Session, notify_changed
 from app.schemas import EventCreate, EventOut, EventPublished
 from app.services import events as service
 
@@ -16,6 +16,7 @@ router = APIRouter(prefix="/api/events", tags=["events"])
 )
 async def publish_event(
     data: EventCreate,
+    request: Request,
     session: Session,
     response: Response,
     idempotency_key: Annotated[str | None, Header(max_length=255)] = None,
@@ -28,7 +29,8 @@ async def publish_event(
     published = await service.publish_event(session, data.event_type, data.payload, idempotency_key)
     if published.deduplicated:
         response.status_code = 200
-    # Wake the delivery worker here.
+    else:
+        await notify_changed(request, published.delivery_ids)
     return EventPublished(
         deduplicated=published.deduplicated,
         event=EventOut.model_validate(published.event),

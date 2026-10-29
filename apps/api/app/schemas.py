@@ -64,3 +64,40 @@ class EventPublished(BaseModel):
     deduplicated: bool
     event: EventOut
     delivery_count: int
+
+
+class DeliverySummary(BaseModel):
+    """What the deliveries table and the live stream carry. `version` only ever grows:
+    clients drop an update whose version is not newer than what they have."""
+
+    id: str
+    event_id: str
+    event_type: str
+    endpoint_id: str
+    endpoint_url: str
+    status: str
+    attempt_count: int
+    series_attempts: int
+    max_attempts: int
+    replay_count: int
+    next_attempt_at: datetime | None
+    last_error: str | None
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class AttemptOut(Model):
+    id: str
+    number: int
+    trigger: str
+    started_at: datetime
+    duration_ms: int
+    response_status: int | None
+    response_body: str | None
+    error: str | None
+
+
+class DeliveryDetail(DeliverySummary):
+    payload: dict[str, Any]
+    attempts: list[AttemptOut]
