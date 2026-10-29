@@ -41,3 +41,25 @@ class EndpointCreated(EndpointOut):
     """Only returned by POST /api/endpoints: the one time the secret is shown."""
 
     secret: str
+
+
+class EventCreate(BaseModel):
+    event_type: str
+    payload: dict[str, Any]
+
+
+class EventOut(Model):
+    id: str
+    event_type: str
+    payload: dict[str, Any]
+    idempotency_key: str | None
+    created_at: datetime
+
+
+class EventPublished(BaseModel):
+    """`deduplicated: true` means the Idempotency-Key was already used for this exact
+    request: nothing new was created and `event` is the original."""
+
+    deduplicated: bool
+    event: EventOut
+    delivery_count: int
