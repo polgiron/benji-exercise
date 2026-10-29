@@ -266,6 +266,12 @@ Shortcuts this demo takes that a real system couldn't:
   endpoints still on version 1.
 - **An Events page** listing each event with its deliveries, and **changing an endpoint's URL**
   from the dashboard. The API already supports both.
+- **A built-in assistant.** A chat in the dashboard where the customer asks about their own
+  subscriptions in plain words: "why did my deliveries to this URL fail last night?", "which
+  endpoints get campaign updates?". It would read their endpoints, deliveries and attempt logs
+  through the same API, spot the problem (a wrong URL, an expired certificate, a server
+  answering 500, a paused endpoint) and suggest the fix, such as replaying the failures once it's
+  solved.
 
 **Quality**
 
