@@ -1,7 +1,7 @@
 import type { VariantProps } from 'class-variance-authority'
 import { cva } from 'class-variance-authority'
 
-export { default as CodeBlock } from './CodeBlock.vue'
+export { default as CodeBlock } from './code-block.vue'
 
 /** Monospace, preformatted text: JSON payloads and schemas, secrets. */
 export const codeBlockVariants = cva(

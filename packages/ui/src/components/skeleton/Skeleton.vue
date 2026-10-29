@@ -10,5 +10,15 @@ const props = defineProps<SkeletonProps>()
 </script>
 
 <template>
-  <div data-slot="skeleton" :class="cn('animate-pulse rounded-md bg-primary/10', props.class)" />
+  <!-- A sheen sweeps across instead of a pulse; reduced motion keeps the still shape. -->
+  <div
+    data-slot="skeleton"
+    aria-hidden="true"
+    :class="
+      cn(
+        'relative overflow-hidden rounded-md bg-foreground/6 before:absolute before:inset-0 before:-translate-x-full before:animate-shimmer before:bg-linear-to-r before:from-transparent before:via-foreground/6 before:to-transparent motion-reduce:before:hidden',
+        props.class,
+      )
+    "
+  />
 </template>

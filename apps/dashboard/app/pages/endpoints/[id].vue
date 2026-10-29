@@ -27,10 +27,23 @@ const update = useUpdateEndpoint()
       <ArrowLeft class="size-4" /> Endpoints
     </NuxtLink>
 
-    <Skeleton v-if="endpoint.isPending.value" class="h-20" />
-    <p v-else-if="endpoint.isError.value" class="text-destructive-foreground">
-      {{ endpoint.error.value?.message }}
-    </p>
+    <div v-if="endpoint.isPending.value" class="space-y-6" aria-busy="true">
+      <div class="flex items-center justify-between gap-4">
+        <div class="space-y-2">
+          <Skeleton class="h-8 w-96 max-w-full" />
+          <Skeleton class="h-4 w-64" />
+        </div>
+        <Skeleton class="h-5 w-24" />
+      </div>
+      <div class="grid gap-4 xl:grid-cols-2">
+        <Skeleton class="h-56 rounded-card" />
+        <Skeleton class="h-56 rounded-card" />
+      </div>
+      <Skeleton class="h-64 rounded-card" />
+    </div>
+    <Card v-else-if="endpoint.isError.value">
+      <LoadError :message="endpoint.error.value?.message" @retry="endpoint.refetch()" />
+    </Card>
     <template v-else-if="endpoint.data.value">
       <PageHeader>
         <template #title>

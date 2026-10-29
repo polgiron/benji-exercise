@@ -1,9 +1,9 @@
 import type { VariantProps } from 'class-variance-authority'
 import { cva } from 'class-variance-authority'
 
-export { default as Alert } from './Alert.vue'
-export { default as AlertDescription } from './AlertDescription.vue'
-export { default as AlertTitle } from './AlertTitle.vue'
+export { default as AlertDescription } from './alert-description.vue'
+export { default as AlertTitle } from './alert-title.vue'
+export { default as Alert } from './alert.vue'
 
 // shadcn-vue's alert, with the status tones the dashboard reports in: a tint of the status
 // colour behind its `-foreground` text, the same pairing as the status badges.

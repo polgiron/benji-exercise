@@ -116,6 +116,7 @@ routing), `api.md` (FastAPI, SQLAlchemy, Python), `database.md` (tables, enums, 
 
 | Kind                        | Pattern                    | Example                  |
 | --------------------------- | -------------------------- | ------------------------ |
+| File (TS, Vue)              | kebab-case                 | `delivery-row.vue`       |
 | Domain / API / shared shape | `I` + PascalCase           | `IDelivery`              |
 | Enum                        | `E` + PascalCase           | `EDeliveryStatus`        |
 | Component props             | `Props`, or `FeatureProps` | `Props`, `ListItemProps` |

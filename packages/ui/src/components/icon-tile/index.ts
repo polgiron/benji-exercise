@@ -1,1 +1,1 @@
-export { default as IconTile } from './IconTile.vue'
+export { default as IconTile } from './icon-tile.vue'
